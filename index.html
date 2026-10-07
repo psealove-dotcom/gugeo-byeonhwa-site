@@ -690,8 +690,8 @@ dialog.big .big-meta{font-size:16px;color:var(--muted)}
 .tx-read .tu.L-원문 .ut,.tx .tu.L-원문 .ut{line-height:1.7}
 .w{display:inline-block;padding:0 1px;border-radius:4px;cursor:pointer;vertical-align:baseline;position:relative}
 .w.w0{cursor:default}
-.w.lv2 .g,.w.lv3 .g{border-bottom:2px dotted #b9ad92}
-.w.lv3 .g{border-bottom-color:#9a4f0c}
+.tx.mark .w.lv2 .g,.tx.mark .w.lv3 .g{border-bottom:2px dotted #b9ad92}
+.tx.mark .w.lv3 .g{border-bottom-color:#9a4f0c}
 .w.ng .g{border-bottom-style:dashed}
 .w:not(.w0):hover,.w:not(.w0):focus{background:#f1ede3;outline:0}
 .w.seen .g{border-bottom-style:solid;border-bottom-color:#cfc7b7}
@@ -713,7 +713,7 @@ dialog.big .big-meta{font-size:16px;color:var(--muted)}
 .tx.lens-표기 .w[data-lay~="표기"]{background:var(--L-표기-bg);box-shadow:inset 0 -3px 0 var(--L-표기)}
 .tx.lens-문법 .w[data-lay~="문법"]{background:var(--L-문법-bg);box-shadow:inset 0 -3px 0 var(--L-문법)}
 .tx.lens-어휘 .w[data-lay~="어휘"]{background:var(--L-어휘-bg);box-shadow:inset 0 -3px 0 var(--L-어휘)}
-.txbar{position:sticky;top:58px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:rgba(246,244,238,.96);backdrop-filter:blur(4px);padding:6px 0;border-bottom:1px solid var(--line);margin-bottom:6px}
+.txbar{position:sticky;top:94px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:rgba(255,254,250,.97);backdrop-filter:blur(4px);padding:8px 0;border-bottom:1px solid var(--line);margin-bottom:6px}
 .lensbar{display:inline-flex;align-items:center;gap:4px;margin-left:auto}
 .lbtn{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:13px}
 .lbtn[data-l="음운"][aria-pressed="true"]{background:var(--L-음운);border-color:var(--L-음운);color:#fff}
@@ -821,6 +821,38 @@ body.print-ans .tx-ans{display:block}
 .gl .hjw2{font-size:12.5px;color:var(--ink2)}
 .gl .chars tr.hun td{font-size:11.5px;color:var(--muted)}
 .tx .w .hj,.tx-read .hj{border-bottom:1px dotted #b9ad92;cursor:help}
+
+/* ── v4-3: 본문 박스 통합 ─────────────── */
+.txbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:0 14px 10px}
+.txmain{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.txmain.with-drawer{grid-template-columns:minmax(0,1fr) 360px}
+.txcol{min-width:0}
+.lens-drawer{position:sticky;top:112px;align-self:start;max-height:calc(100vh - 124px);overflow:auto}
+.lens-drawer .lens-panel{background:#faf8f3}
+.lens-drawer[hidden]{display:none}
+.tu .ut{flex:1 1 auto}
+.tu .upb{display:inline-flex;gap:3px;flex:none;align-self:flex-start;margin-top:8px;opacity:.55}
+.tu:hover .upb,.tu:focus-within .upb,.tu .upb:has([aria-pressed="true"]){opacity:1}
+.ub{font-size:11px;border:1px solid var(--line2);background:#fff;border-radius:999px;padding:0 7px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.ub[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.upr{margin:0 10px 10px 46px}
+.upr[hidden]{display:none}
+.upr .pr-item[hidden]{display:none}
+.upr details.practice>summary{display:none}
+.upr .trrow{margin-bottom:6px}
+.tx.pr-all .upr[hidden],.tx.pr-all .pr-item[hidden]{display:block}
+.tx[hidden]{display:none}
+.tx-pairs[hidden]{display:none}
+.gl .ltag.go{cursor:pointer;text-decoration:underline dotted}
+@media (max-width:900px){ .txmain.with-drawer{grid-template-columns:1fr} .lens-drawer{position:static;max-height:none} .upr{margin-left:10px} }
+@media print{
+  .txbox{border:0;padding:0}
+  .tu .upb,.txbar{display:none!important}
+  .upr[hidden],.upr .pr-item[hidden]{display:block}
+  .upr details.practice{display:none}
+  .lens-drawer{display:block!important;position:static}
+  .lens-drawer[hidden]{display:none!important}
+}
 
 </style>
 </head>
@@ -2406,7 +2438,7 @@ function openGloss(t, g, anchor, ctx, V) {
     if (g.parts && g.parts.length) kids.push(h('p', { class: 'gl-p' }, g.parts.flatMap((pt, i) => [i ? ' + ' : '', h('span', { class: 'pt-i' }, [pt.focus != null ? txt(pt.focus, ctx, 'oh') : h('span', { class: 'oh', text: String.fromCodePoint(parseInt(pt.jamo, 16)) }), h('small', { text: ` ${pt.fn}` })])])));
     const seeG = g.see ? glossById(t, g.see) : null; const note = g.note || (seeG && seeG.note);
     if (note) kids.push(h('p', { class: 'gl-n' }, [seeG && !g.note ? h('span', { class: 'muted', text: '(앞의 같은 말) ' }) : null, txt(note, ctx)]));
-    if (g.layers && g.layers.length) kids.push(h('div', { class: 'gl-l' }, g.layers.map(x => { const i = x.indexOf(':'); const lay = i > 0 ? x.slice(0, i) : x, tag = i > 0 ? x.slice(i + 1) : ''; return h('span', { class: 'ltag', 'data-l': lay, text: tag || lay }); })));
+    if (g.layers && g.layers.length) kids.push(h('div', { class: 'gl-l' }, g.layers.map(x => { const i = x.indexOf(':'); const lay = i > 0 ? x.slice(0, i) : x, tag = i > 0 ? x.slice(i + 1) : ''; return h('span', { class: 'ltag go', 'data-l': lay, role: 'button', tabindex: '0', title: `${lay} 렌즈 켜기 \u2014 같은 종류의 어절을 본문에서 보기`, text: tag || lay, onclick: () => { closePop(); V.setLens && V.setLens(lay, true); } }); })));
     const lk = g.links || {}; const lks = [];
     (lk.rule || []).forEach(id => { const rc = ruleById(id); if (rc) lks.push(h('a', { href: `#${rc.lesson}`, class: 'gl-link', onclick: closePop, text: `규칙 \u2192 ${rc.name} (${rc.lesson})` })); });
     (lk.term || []).forEach(term => { const gg = GLOSS_BY[term]; lks.push(gg ? h('span', { class: 'term gl-link', role: 'button', tabindex: '0', text: term, onclick: e => { e.stopPropagation(); termPop(e.currentTarget, gg); } }) : h('span', { class: 'gl-link', text: term })); });
@@ -2491,6 +2523,8 @@ function annoBlock(t, ctx, V) {
   const core = coreKeys(t); const gi = glossIndex(t);
   return h('div', { class: 'tx' + (V.guessMode ? ' gm' : '') }, t.passages.map(pg => h('div', { class: 'tp' }, [h('h3', { class: 'tp-h' }, [h('span', { class: 'pid', text: pg.pid }), pg.title || '']),
     ...pg.units.map(u => { const line = h('div', { class: 'tu' + (core.has(unitKey(u)) ? ' core' : '') + (u.layer ? ' L-' + u.layer : ''), 'data-u': unitKey(u) }, [u.layer ? h('span', { class: 'ul', text: u.layer }) : u.verse ? h('span', { class: 'ul', text: `${u.verse}구` }) : u.s ? h('span', { class: 'ul n', text: `${u.s}` }) : null, h('div', { class: 'ut' }, unitWords(t, u, ctx, V))]);
+      const ex = V.unitExtras ? V.unitExtras(u) : null;
+      if (ex) { line.appendChild(ex.btns); return [line, ex.box]; }
       return line; })])));
 }
 function pairsBlock(t, ctx, V) {
@@ -2507,9 +2541,9 @@ function lensBlock(t, ctx, V) {
   const panel = h('div', { class: 'lens-panel' });
   const btns = LAYERS.map(lay => h('button', { type: 'button', class: 'lbtn', 'data-l': lay, 'aria-pressed': 'false', text: lay, onclick: () => setLens(lay) }));
   const bar = h('span', { class: 'lensbar' }, [h('span', { class: 'muted', text: '렌즈 ' }), ...btns]);
-  function setLens(lay) { V.lens = V.lens === lay ? null : lay; btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === V.lens))); LAYERS.forEach(l => V.root.classList.toggle('lens-' + l, V.lens === l)); V.words.forEach(sp => sp.classList.remove('fright', 'fwrong', 'fmiss')); drawPanel(); }
+  function setLens(lay, force) { V.lens = (!force && V.lens === lay) ? null : lay; btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === V.lens))); LAYERS.forEach(l => V.root.classList.toggle('lens-' + l, V.lens === l)); V.words.forEach(sp => sp.classList.remove('fright', 'fwrong', 'fmiss')); if (V.drawer) { V.drawer.hidden = !V.lens; V.main.classList.toggle('with-drawer', !!V.lens); } drawPanel(); if (force && V.drawer) V.drawer.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   function drawPanel() { panel.textContent = '';
-    if (!V.lens) { panel.appendChild(h('p', { class: 'muted', text: '위 \u2461의 렌즈 단추를 켜면 그 층위와 관련된 어절에 색이 들어오고, 여기에 관찰 과제가 나옵니다.' })); return; }
+    if (!V.lens) { panel.appendChild(h('p', { class: 'muted', text: '렌즈 단추를 켜면 그 층위와 관련된 어절에 색이 들어오고, 여기에 관찰 과제가 나옵니다.' })); return; }
     const lay = V.lens; const tg = (tags[lay] || []).filter(x => used.has(`${lay}:${x}`)); const ts = tasks[lay] || [];
     const L = D.lessons.find(x => x.fill.era === t.era && x.fill.layer === lay) || D.lessons.find(x => x.id === (ts[0] || {}).practice);
     add(panel, [h('div', { class: 'tags-row' }, [lb(lay), ...tg.map(x => h('span', { class: 'ltag', 'data-l': lay, text: x }))]),
@@ -2562,7 +2596,7 @@ function explainEl(no, spec, key, ctx) {
 // ④ 내 번역: 문장마다 쓰기 → 힌트(단계적) → 제출하면 모범 번역·핵심어·자기 채점
 function transBlock(t, ctx, V) {
   const core = coreKeys(t); const reqAll = (t.decode || {}).required === 'all';
-  return h('div', { class: 'tx-tr' }, t.translations.map((tr, i) => {
+  return (tr, i) => {
     const k = unitKey(tr), req = reqAll || core.has(k), key = `${t.id}/tr/${k}`, saved = store.get('text', key) || {};
     const ta = h('textarea', { class: 'ans tr', 'aria-label': '내 번역', placeholder: '현대어로 옮겨 쓰세요' }); ta.value = saved.my || '';
     let hints = saved.hints || 0; const hintBox = h('div', { class: 'hintbox', hidden: true });
@@ -2579,7 +2613,7 @@ function transBlock(t, ctx, V) {
     setHint(); if (saved.done) submit(true); else sub.disabled = ta.value.trim().length < 2;
     return h('div', { class: 'trrow' + (req ? ' req' : '') }, [h('div', { class: 'tr-src' }, [h('span', { class: 'tn', text: `${i + 1}` }), req ? h('span', { class: 'chip req', text: '필수' }) : null, txt(unitText({ rid: tr.rid, syl: tr.syl }), ctx, 'oh')]),
       ta, h('div', { class: 'q-a', style: 'margin-left:0' }, [sub, tr.hint || (tr.keys || []).length ? hintBtn : null]), hintBox, box, rub]);
-  }));
+  };
 }
 // ⑤ 내용과 생각
 function evText(e) { const c = tcl(e.rid); if (!c.length) return ''; if (e.focus) return e.focus; if ('syl' in e) return c.slice(e.syl[0], e.syl[1] + 1).join(''); if ('tok' in e) { const w = twords(e.rid)[e.tok - 1]; return w ? c.slice(w.a, w.b + 1).join('') : ''; } const str = c.join(''); return str.length > 40 ? str.slice(0, 40) + '\u2026' : str; }
@@ -2651,31 +2685,48 @@ function textView(t) {
   const sib = TX.filter(x => x.era === t.era), idx = sib.indexOf(t), prev = sib[idx - 1], next = sib[idx + 1];
   const lessons = D.lessons.filter(L => L.fill.era === t.era);
   const sec = h('section', { class: 'view textv', id: `v-${t.id}`, 'data-view': t.id });
+  // 본문 박스: 통독·어절 주석·층위 렌즈가 한 박스에서 이어진다. 번역·끊어 읽기·방점 읽기는 문장 끝 단추로 펼치는 '연습'.
+  const trRowOf = transBlock(t, ctx, V); const trIdx = new Map(t.translations.map((tr, i) => [unitKey(tr), i]));
+  V.prBtns = [];
+  V.unitExtras = u => {
+    const k = unitKey(u); const s0 = unitText(u); const hasTone = TONE_RE.test(s0); TONE_RE.lastIndex = 0;
+    const parts = [];
+    if (trIdx.has(k)) parts.push(['\u270E 번역', trRowOf(t.translations[trIdx.get(k)], trIdx.get(k))]);
+    if (u.cuts && u.cuts.length) parts.push(['끊어 읽기', tCutWidget(t, u, ctx, V)]);
+    if (hasTone) parts.push(['방점 읽기', toneWidget({ id: t.id }, { no: k, raw: s0 }, ctx)]);
+    if (!parts.length) return null;
+    const box = h('div', { class: 'upr', hidden: true }), btns = h('span', { class: 'upb' });
+    parts.forEach(([label, el]) => { el.hidden = true; el.classList.add('pr-item'); if (el.tagName === 'DETAILS') el.open = true; box.appendChild(el);
+      const bt = h('button', { type: 'button', class: 'ub', text: label, 'aria-pressed': 'false', onclick: () => { el.hidden = !el.hidden; bt.setAttribute('aria-pressed', String(!el.hidden)); box.hidden = [...box.children].every(c => c.hidden); } });
+      btns.appendChild(bt); });
+    return { btns, box };
+  };
   const anno = annoBlock(t, ctx, V); V.root = anno;
+  const mark0 = meta0.mark != null ? !!meta0.mark : true; anno.classList.toggle('mark', mark0);
   const findbar = h('div', { class: 'findbar', hidden: true });
-  V.beginFind = (task, key, saved, grade) => { V.find = { task, key, grade }; V.picked = new Set(saved.picked || []); anno.classList.add('findmode'); V.words.forEach(sp => { sp.classList.remove('fright', 'fwrong', 'fmiss'); sp.classList.toggle('pick', V.picked.has(sp.dataset.key)); }); V.onFindChange.forEach(f => f()); anno.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
+  V.beginFind = (task, key, saved, grade) => { V.find = { task, key, grade }; V.picked = new Set(saved.picked || []); anno.classList.add('findmode'); V.words.forEach(sp => { sp.classList.remove('fright', 'fwrong', 'fmiss'); sp.classList.toggle('pick', V.picked.has(sp.dataset.key)); }); V.onFindChange.forEach(f => f()); };
   V.endFind = () => { V.find = null; anno.classList.remove('findmode'); V.words.forEach(sp => sp.classList.remove('pick')); V.onFindChange.forEach(f => f()); };
   V.togglePick = sp => { const k = sp.dataset.key; if (!k) return; if (V.picked.has(k)) V.picked.delete(k); else V.picked.add(k); sp.classList.toggle('pick', V.picked.has(k)); V.onFindChange.forEach(f => f()); };
   V.onFindChange.push(() => { findbar.hidden = !V.find; findbar.textContent = ''; if (!V.find) return; add(findbar, [h('span', null, [h('b', { text: '본문에서 찾기 ' }), `${V.find.task.q} \u2014 ${V.picked.size}개 선택`]), h('button', { type: 'button', class: 'btn pri', text: '확인', disabled: !V.picked.size, onclick: () => V.find.grade() }), h('button', { type: 'button', class: 'btn ghost', text: '멈춤', onclick: () => { store.set('text', V.find.key, { ...(store.get('text', V.find.key) || {}), picked: [...V.picked], done: false }); V.endFind(); } })]); });
   const lens = lensBlock(t, ctx, V);
-  const guessBtn = h('button', { type: 'button', class: 'tbtn', 'aria-checked': String(V.guessMode), text: '먼저 추측', title: '주석을 열기 전에, 지금 말과 다른 점(층위·세부 항목)을 먼저 고릅니다', onclick: () => { V.guessMode = !V.guessMode; guessBtn.setAttribute('aria-checked', String(V.guessMode)); anno.classList.toggle('gm', V.guessMode); tset(t.id, 'meta', 'guess', V.guessMode); } });
-  const ilBtn = h('button', { type: 'button', class: 'tbtn', 'aria-checked': 'false', text: '현대어 함께 보기', onclick: () => { const on = anno.classList.toggle('il'); ilBtn.setAttribute('aria-checked', String(on)); } });
+  const drawer = h('aside', { class: 'lens-drawer', hidden: true }, [lens.panel]); V.drawer = drawer;
+  const pairsEl = pairsBlock(t, ctx, V); if (pairsEl) pairsEl.hidden = true;
+  const main = h('div', { class: 'txmain' }, [h('div', { class: 'txcol' }, [anno, pairsEl]), drawer]); V.main = main;
+  const tb = (label, on, title, fn) => { const bt = h('button', { type: 'button', class: 'tbtn', 'aria-checked': String(on), text: label, title, onclick: () => { const v = bt.getAttribute('aria-checked') !== 'true'; bt.setAttribute('aria-checked', String(v)); fn(v); } }); return bt; };
+  const markBtn = tb('주석 표시', mark0, '먼저 추측해 볼 어절에 점선 밑줄을 보입니다(수업 통독 때는 끄기)', v => { anno.classList.toggle('mark', v); tset(t.id, 'meta', 'mark', v); });
+  const guessBtn = tb('먼저 추측', V.guessMode, '주석을 열기 전에, 지금 말과 다른 점(층위·세부 항목)을 먼저 고릅니다', v => { V.guessMode = v; anno.classList.toggle('gm', v); tset(t.id, 'meta', 'guess', v); });
+  const ilBtn = tb('현대어 함께 보기', false, '어절 아래에 현대어 뜻을 함께 보입니다', v => anno.classList.toggle('il', v));
+  const prBtn = tb('연습하기', false, '모든 문장의 번역·끊어 읽기·방점 읽기 칸을 펼칩니다(문장 끝 단추로 하나씩도 가능)', v => anno.classList.toggle('pr-all', v));
+  const pairBtn = pairsEl ? tb('나란히 보기', false, '같은 자리의 판본을 나란히 놓고 봅니다', v => { pairsEl.hidden = !v; anno.hidden = v; }) : null;
+  const txbar = h('div', { class: 'txbar' }, [markBtn, guessBtn, ilBtn, prBtn, pairBtn, lens.bar]);
   add(sec, [
     h('div', { class: 'lhead' }, [h('div', { class: 'lid tx-lid', text: t.era }), h('div', { style: 'min-width:0' }, [h('h1', { text: t.title }), h('p', { class: 'sub', text: `${t.role === '대표' ? '시대 대표 텍스트' : '심화 텍스트'} \u00B7 ${works.join(' \u00B7 ')}` }),
       h('div', { class: 'chips' }, [h('span', { class: 'chip', text: t.role === '대표' ? '한 편 완독 과제' : '비계를 줄인 심화 읽기' }), ...unv.map(x => h('span', { class: 'chip unv', title: x.verified, text: `영인 미대조: ${x.work}` })), ...(t.deepen || []).map(d => TXBY[d] ? h('a', { class: 'chip link', href: `#${d}`, text: `심화 \u2192 ${TXBY[d].title}` }) : null)]),
       progressEl(t, V)])]),
     h('div', { class: 'intro' }, [h('p', { class: 'what' }, txt(t.intro.what || '', ctx)), t.intro.scene ? h('p', { class: 'scene' }, txt(t.intro.scene, ctx)) : null, t.intro.howToRead && t.intro.howToRead.length ? h('div', { class: 'howto' }, [h('b', { text: '읽는 법' }), h('ol', null, t.intro.howToRead.map(x => h('li', null, txt(x, ctx))))]) : null, t.intro.watch ? h('p', { class: 'watch' }, [h('b', { text: '눈여겨볼 것 ' }), txt(t.intro.watch, ctx)]) : null]),
-    h('h2', { class: 'sec' }, ['\u2460 통독 ', h('small', { text: '전체를 소리 내어 읽습니다. 붙여 쓴 글은 끊어 읽기, 방점이 있는 글은 방점 읽기를 해 봅니다. 띠가 있는 곳이 핵심 구간' })]),
-    readBlock(t, ctx, V),
-    t.pairs ? [h('h2', { class: 'sec' }, ['판본 견주기 ', h('small', { text: '같은 자리의 글을 나란히 놓았습니다. 어절을 누르면 주석이 열립니다' })]), pairsBlock(t, ctx, V)] : null,
-    h('h2', { class: 'sec' }, ['\u2461 어절 주석 ', h('small', { text: "어절을 누르면 뜻과 형태가 열립니다. 점선 밑줄은 '지금 말과 어디가 다른지' 먼저 골라 볼 어절" })]),
-    h('div', { class: 'txbar' }, [guessBtn, ilBtn, lens.bar]),
-    anno, findbar,
-    h('h2', { class: 'sec' }, ['\u2462 층위 렌즈 ', h('small', { text: '렌즈를 켜고 본문에서 그 층위의 어절을 관찰합니다' })]),
-    lens.panel,
-    h('h2', { class: 'sec' }, ['\u2463 내 번역 ', h('small', { text: (t.decode || {}).required === 'all' ? '전 문장을 옮깁니다. 제출하면 모범 번역과 핵심어가 보입니다' : "'필수' 문장은 꼭 옮깁니다. 제출하면 모범 번역과 핵심어가 보입니다" })]),
-    transBlock(t, ctx, V),
-    h('h2', { class: 'sec' }, ['\u2464 내용과 생각 ', h('small', { text: '글 전체를 이해했는지 확인하고, 생각을 씁니다' })]),
+    h('h2', { class: 'sec' }, ['본문 ', h('small', { text: '어절을 누르면 주석, 한자를 누르면 훈·음, 렌즈를 켜면 그 층위의 어절이 색으로. 문장 끝 단추로 번역·끊어 읽기·방점 읽기 연습. 띠가 있는 곳이 핵심 구간' })]),
+    h('div', { class: 'txbox' }, [txbar, main, findbar]),
+    h('h2', { class: 'sec' }, ['확인하기 ', h('small', { text: '글 전체를 이해했는지 확인하고, 생각을 씁니다' })]),
     qBlock(t, ctx, V),
     t.essay ? explainEl('서술', { stem: t.essay.stem, context: t.essay.context, conditions: t.essay.conditions, model: t.essay.model, keys: t.essay.keys, rubric: t.essay.rubric }, `${t.id}/essay`, ctx) : null,
     t.decode && t.decode.summaryQ ? explainEl('한 문장', { stem: t.decode.summaryQ, keys: t.decode.summaryKeys }, `${t.id}/summary`, ctx) : null,
