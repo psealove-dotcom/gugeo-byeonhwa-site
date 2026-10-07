@@ -840,7 +840,7 @@ body.print-ans .tx-ans{display:block}
 .upr .pr-item[hidden]{display:none}
 .upr details.practice>summary{display:none}
 .upr .trrow{margin-bottom:6px}
-.tx.pr-all .upr[hidden],.tx.pr-all .pr-item[hidden]{display:block}
+.tx.pr-all .upr[hidden],.tx.pr-all .pr-item.trview[hidden]{display:block}
 .tx[hidden]{display:none}
 .tx-pairs[hidden]{display:none}
 .gl .ltag.go{cursor:pointer;text-decoration:underline dotted}
@@ -853,6 +853,11 @@ body.print-ans .tx-ans{display:block}
   .lens-drawer{display:block!important;position:static}
   .lens-drawer[hidden]{display:none!important}
 }
+
+.trview{background:#f6f3ec;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:15px}
+.trview .trm{margin:0}
+.trview .trl{margin:3px 0 0;font-size:13px}
+@media print{ body[data-print-mode="student"] .trview{display:none!important} .upr[hidden] .trview,.trview[hidden]{display:block} }
 
 </style>
 </head>
@@ -2633,12 +2638,12 @@ function textProgress(t) {
   const rec = trec(t.id), us = flatUnits(t);
   const cutUnits = us.filter(u => u.cuts && u.cuts.length), cutsDone = cutUnits.filter(u => ((rec.cuts || {})[unitKey(u)] || {}).done).length;
   const gg = t.glosses.filter(g => g.guess), seen = gg.filter(g => ((rec.guess || {})[g.gid] || {}).seen).length;
-  const core = coreKeys(t), reqAll = (t.decode || {}).required === 'all'; const trs = t.translations.filter(tr => reqAll || core.has(unitKey(tr))), trDone = trs.filter(tr => (store.get('text', `${t.id}/tr/${unitKey(tr)}`) || {}).done).length;
+  const core = coreKeys(t), reqAll = (t.decode || {}).required === 'all'; const trs = t.translations.filter(tr => reqAll || core.has(unitKey(tr))), trDone = trs.filter(tr => { const r_ = store.get('text', `${t.id}/tr/${unitKey(tr)}`) || {}; return r_.done || r_.viewed; }).length;
   const qOk = t.questions.filter(q => (store.get('text', `${t.id}/q/${q.qid}`) || {}).correct).length, qDone = t.questions.filter(q => (store.get('text', `${t.id}/q/${q.qid}`) || {}).done).length;
   const steps = [
     { name: '끊어 읽기', ok: cutUnits.length === 0 || cutsDone === cutUnits.length, txt: cutUnits.length ? `${cutsDone}/${cutUnits.length}` : '해당 없음' },
     { name: '어절 추측', ok: gg.length === 0 || seen / gg.length >= 0.8, txt: gg.length ? `${seen}/${gg.length}` + (gg.length && seen ? ` (맞힘 ${gg.filter(g => ((rec.guess || {})[g.gid] || {}).hit === true).length})` : '') : '해당 없음' },
-    { name: reqAll ? '번역 전체' : '핵심 구간 번역', ok: trs.length === 0 || trDone === trs.length, txt: `${trDone}/${trs.length}` },
+    { name: reqAll ? '해설 전체 읽기' : '핵심 구간 해설 읽기', ok: trs.length === 0 || trDone === trs.length, txt: `${trDone}/${trs.length}` },
     { name: '내용 문항', ok: qOk >= Math.min(3, t.questions.length), txt: `${qOk}/${t.questions.length} 정답` }];
   const all = steps.every(x => x.ok); const started = cutsDone || seen || trDone || qDone;
   if (all && !((rec.meta || {}).badge)) tset(t.id, 'meta', 'badge', new Date().toISOString().slice(0, 10));
@@ -2686,18 +2691,20 @@ function textView(t) {
   const lessons = D.lessons.filter(L => L.fill.era === t.era);
   const sec = h('section', { class: 'view textv', id: `v-${t.id}`, 'data-view': t.id });
   // 본문 박스: 통독·어절 주석·층위 렌즈가 한 박스에서 이어진다. 번역·끊어 읽기·방점 읽기는 문장 끝 단추로 펼치는 '연습'.
-  const trRowOf = transBlock(t, ctx, V); const trIdx = new Map(t.translations.map((tr, i) => [unitKey(tr), i]));
+  const trIdx = new Map(t.translations.map((tr, i) => [unitKey(tr), i]));
+  // 현대어 해설: 문장 아래에 모범 번역(+직역·읽기 도움)을 바로 보여 준다. 처음 열면 '봤음'으로 기록(완독 진행에 쓰임)
+  const trViewOf = (tr, k) => { const key = `${t.id}/tr/${k}`; const el = h('div', { class: 'trview' }, [h('p', { class: 'trm' }, [h('b', { text: '현대어 ' }), tr.modern]), tr.literal ? h('p', { class: 'muted trl', text: `직역: ${tr.literal}` }) : null, tr.hint ? h('p', { class: 'muted trl', text: `읽기 도움: ${tr.hint}` }) : null]);
+    el.onView = () => { const cur = store.get('text', key) || {}; if (!cur.viewed) { store.set('text', key, { ...cur, viewed: true }); V.progress(); } }; return el; };
   V.prBtns = [];
   V.unitExtras = u => {
     const k = unitKey(u); const s0 = unitText(u); const hasTone = TONE_RE.test(s0); TONE_RE.lastIndex = 0;
     const parts = [];
-    if (trIdx.has(k)) parts.push(['\u270E 번역', trRowOf(t.translations[trIdx.get(k)], trIdx.get(k))]);
+    if (trIdx.has(k)) parts.push(['현대어 해설', trViewOf(t.translations[trIdx.get(k)], k)]);
     if (u.cuts && u.cuts.length) parts.push(['끊어 읽기', tCutWidget(t, u, ctx, V)]);
-    if (hasTone) parts.push(['방점 읽기', toneWidget({ id: t.id }, { no: k, raw: s0 }, ctx)]);
     if (!parts.length) return null;
     const box = h('div', { class: 'upr', hidden: true }), btns = h('span', { class: 'upb' });
     parts.forEach(([label, el]) => { el.hidden = true; el.classList.add('pr-item'); if (el.tagName === 'DETAILS') el.open = true; box.appendChild(el);
-      const bt = h('button', { type: 'button', class: 'ub', text: label, 'aria-pressed': 'false', onclick: () => { el.hidden = !el.hidden; bt.setAttribute('aria-pressed', String(!el.hidden)); box.hidden = [...box.children].every(c => c.hidden); } });
+      const bt = h('button', { type: 'button', class: 'ub', text: label, 'aria-pressed': 'false', onclick: () => { el.hidden = !el.hidden; bt.setAttribute('aria-pressed', String(!el.hidden)); box.hidden = [...box.children].every(c => c.hidden); if (!el.hidden && el.onView) el.onView(); } });
       btns.appendChild(bt); });
     return { btns, box };
   };
@@ -2716,7 +2723,7 @@ function textView(t) {
   const markBtn = tb('주석 표시', mark0, '먼저 추측해 볼 어절에 점선 밑줄을 보입니다(수업 통독 때는 끄기)', v => { anno.classList.toggle('mark', v); tset(t.id, 'meta', 'mark', v); });
   const guessBtn = tb('먼저 추측', V.guessMode, '주석을 열기 전에, 지금 말과 다른 점(층위·세부 항목)을 먼저 고릅니다', v => { V.guessMode = v; anno.classList.toggle('gm', v); tset(t.id, 'meta', 'guess', v); });
   const ilBtn = tb('현대어 함께 보기', false, '어절 아래에 현대어 뜻을 함께 보입니다', v => anno.classList.toggle('il', v));
-  const prBtn = tb('연습하기', false, '모든 문장의 번역·끊어 읽기·방점 읽기 칸을 펼칩니다(문장 끝 단추로 하나씩도 가능)', v => anno.classList.toggle('pr-all', v));
+  const prBtn = tb('해설 모두 보기', false, '모든 문장의 현대어 해설을 펼칩니다(문장 끝 단추로 하나씩도 가능)', v => { anno.classList.toggle('pr-all', v); if (v) anno.querySelectorAll('.trview').forEach(e => e.onView && e.onView()); });
   const pairBtn = pairsEl ? tb('나란히 보기', false, '같은 자리의 판본을 나란히 놓고 봅니다', v => { pairsEl.hidden = !v; anno.hidden = v; }) : null;
   const txbar = h('div', { class: 'txbar' }, [markBtn, guessBtn, ilBtn, prBtn, pairBtn, lens.bar]);
   add(sec, [
@@ -2724,7 +2731,7 @@ function textView(t) {
       h('div', { class: 'chips' }, [h('span', { class: 'chip', text: t.role === '대표' ? '한 편 완독 과제' : '비계를 줄인 심화 읽기' }), ...unv.map(x => h('span', { class: 'chip unv', title: x.verified, text: `영인 미대조: ${x.work}` })), ...(t.deepen || []).map(d => TXBY[d] ? h('a', { class: 'chip link', href: `#${d}`, text: `심화 \u2192 ${TXBY[d].title}` }) : null)]),
       progressEl(t, V)])]),
     h('div', { class: 'intro' }, [h('p', { class: 'what' }, txt(t.intro.what || '', ctx)), t.intro.scene ? h('p', { class: 'scene' }, txt(t.intro.scene, ctx)) : null, t.intro.howToRead && t.intro.howToRead.length ? h('div', { class: 'howto' }, [h('b', { text: '읽는 법' }), h('ol', null, t.intro.howToRead.map(x => h('li', null, txt(x, ctx))))]) : null, t.intro.watch ? h('p', { class: 'watch' }, [h('b', { text: '눈여겨볼 것 ' }), txt(t.intro.watch, ctx)]) : null]),
-    h('h2', { class: 'sec' }, ['본문 ', h('small', { text: '어절을 누르면 주석, 한자를 누르면 훈·음, 렌즈를 켜면 그 층위의 어절이 색으로. 문장 끝 단추로 번역·끊어 읽기·방점 읽기 연습. 띠가 있는 곳이 핵심 구간' })]),
+    h('h2', { class: 'sec' }, ['본문 ', h('small', { text: '어절을 누르면 주석, 한자를 누르면 훈·음, 렌즈를 켜면 그 층위의 어절이 색으로. 문장 끝 단추로 현대어 해설과 끊어 읽기. 띠가 있는 곳이 핵심 구간' })]),
     h('div', { class: 'txbox' }, [txbar, main, findbar]),
     h('h2', { class: 'sec' }, ['확인하기 ', h('small', { text: '글 전체를 이해했는지 확인하고, 생각을 씁니다' })]),
     qBlock(t, ctx, V),
