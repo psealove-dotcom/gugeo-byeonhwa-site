@@ -814,6 +814,14 @@ body.print-ans .tx-ans{display:block}
 .w.part .g{border-bottom-color:#d9a441}
 .w.miss .g{border-bottom-color:var(--no)}
 
+/* 주석 팝업 한자 훈·음 */
+.gl .gl-hj{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;margin:2px 0 6px}
+.gl .hjc{background:#f6f3ec;border-radius:4px;padding:0 6px}
+.gl .hjc .oh{font-size:17px}
+.gl .hjw2{font-size:12.5px;color:var(--ink2)}
+.gl .chars tr.hun td{font-size:11.5px;color:var(--muted)}
+.tx .w .hj,.tx-read .hj{border-bottom:1px dotted #b9ad92;cursor:help}
+
 </style>
 </head>
 <body>
@@ -2339,6 +2347,7 @@ function parseKey(k) { const i = k.indexOf('|'); const rid = k.slice(0, i), q = 
 function overlaps(x, k) { const q = parseKey(k); if (q.rid !== x.rid) return false; if ('syl' in x) return q.a != null && !(q.b < x.syl[0] || q.a > x.syl[1]); return q.tok === x.tok; }
 const PUNCT_END = /[,.?!:;\u3001\u3002\uFF0C\uFF1F\uFF01]+$/;
 const normK = v => (v || '').replace(/[\s,.\u00B7'"\u201C\u201D\u2018\u2019()?!~\-]/g, '').toLowerCase();
+function txtH(str, ctx, cls) { const el = h('span', { class: cls || null }); return paint(el, () => { el.textContent = toneOn(ctx) ? str : strip(str); if (/[\u4e00-\u9fff]/.test(str)) hanjify(el); }); }
 const unitKey = u => `${u.rid}|` + ('syl' in u && u.syl ? `s${u.syl[0]}-${u.syl[1]}` : 'all');
 function unitText(u) { const c = tcl(u.rid); const [a, b] = u.syl || [0, c.length - 1]; return c.slice(a, b + 1).join(''); }
 function flatUnits(t) { return t._fu || (t._fu = t.passages.flatMap(pg => pg.units.map(u => ({ ...u, pid: pg.pid })))); }
@@ -2355,11 +2364,12 @@ function wordEl(t, pos, text, g, ctx, V) {
   const shown = text.replace(PUNCT_END, ''), tail = text.slice(shown.length);   // 노걸대 16세기 판: 어절 끝 문장 부호는 뗀다(보고 §2-4)
   const sp = h('span', { class: 'w' + (g ? ` lv${g.level || 1}` : ' w0') + (g && g.graded === false ? ' ng' : ''), 'data-key': posKey(pos), role: g ? 'button' : null, tabindex: g ? '0' : null, title: g ? '누르면 주석' : null });
   if (g) { sp.dataset.gid = g.gid; sp.dataset.lay = (g.layers || []).map(x => x.split(':')[0]).join(' '); }
-  const gEl = h('span', { class: 'g' }); paint(gEl, () => { gEl.textContent = toneOn(ctx) ? shown : strip(shown); }); sp.appendChild(gEl);
+  const gEl = h('span', { class: 'g' }); paint(gEl, () => { gEl.textContent = toneOn(ctx) ? shown : strip(shown); if (/[\u4e00-\u9fff]/.test(shown)) hanjify(gEl); }); sp.appendChild(gEl);
   if (tail) sp.appendChild(h('span', { class: 'pt', text: tail }));
   if (g) sp.appendChild(h('small', { class: 'il', text: g.reading || g.modern || '' }));
   if (g) { const r = (V.rec().guess || {})[g.gid]; if (r && r.seen) markWord(sp, r); }
-  const act = () => { if (V.find) { V.togglePick(sp); return; } if (g) openGloss(t, g, sp, ctx, V); };
+  const act = e => { if (e && e.target && e.target.closest && e.target.closest('.hj') && !V.find) return;   // 한자 자체를 누르면 훈·음 팝업(문서 수준 처리)
+    if (V.find) { V.togglePick(sp); return; } if (g) openGloss(t, g, sp, ctx, V); };
   sp.addEventListener('click', act);
   if (g) sp.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
   V.words.push(sp);
@@ -2373,7 +2383,7 @@ function unitWords(t, u, ctx, V) {
     twords(rid).filter(w => w.a >= a && w.b <= b).forEach((w, k) => { if (k) out.push(' '); out.push(wordEl(t, { rid, tok: w.tok }, c.slice(w.a, w.b + 1).join(''), gi.tok[w.tok], ctx, V)); });
   } else {
     let i = a;
-    while (i <= b) { const g = gi.syl[i]; if (g && g.syl[1] <= b) { out.push(wordEl(t, { rid, syl: g.syl }, c.slice(g.syl[0], g.syl[1] + 1).join(''), g, ctx, V)); i = g.syl[1] + 1; } else { const x = c[i]; if (/^\s+$/.test(x)) out.push(x.includes('\n') ? h('br') : ' '); else out.push(txt(x, ctx, 'pl')); i++; } }
+    while (i <= b) { const g = gi.syl[i]; if (g && g.syl[1] <= b) { out.push(wordEl(t, { rid, syl: g.syl }, c.slice(g.syl[0], g.syl[1] + 1).join(''), g, ctx, V)); i = g.syl[1] + 1; } else { const x = c[i]; if (/^\s+$/.test(x)) out.push(x.includes('\n') ? h('br') : ' '); else out.push(txtH(x, ctx, 'pl')); i++; } }
   }
   return out;
 }
@@ -2387,7 +2397,11 @@ function openGloss(t, g, anchor, ctx, V) {
     const kids = [];
     if (g.modern) kids.push(h('p', { class: 'gl-m' }, h('b', { text: g.modern })));
     if (g.reading) kids.push(h('p', { class: 'gl-r', text: `읽기: ${g.reading}` }));
-    if (g.chars) kids.push(h('table', { class: 'chars' }, [h('tr', null, g.chars.map(c => h('th', { class: 'oh', text: c.ch }))), h('tr', null, g.chars.map(c => h('td', null, [h('span', { class: 'use', 'data-u': c.use, text: c.use }), ' ', c.read || ''])))]));
+    const hz = [...new Set(g.focus.match(/[\u4e00-\u9fff]/g) || [])];
+    if (hz.length) { const runs = (g.focus.match(/[\u4e00-\u9fff]+/g) || []); const ws = [...new Set(runs.flatMap(r_ => wordsIn(r_)))];
+      kids.push(h('div', { class: 'gl-hj' }, [h('b', { text: '한자 ' }), ...hz.map(c => { const i = HJ.chars[c]; return h('span', { class: 'hjc' }, [h('span', { class: 'oh', text: c }), ' ', i ? `${i.hun} ${i.eum}` : h('span', { class: 'muted', text: '(사전 없음)' })]); }),
+        ...ws.map(w => h('span', { class: 'hjw2' }, [h('b', { text: w }), ` ${HJ.words[w].eum} \u2014 ${HJ.words[w].gloss}`]))])); }
+    if (g.chars) kids.push(h('table', { class: 'chars' }, [h('tr', null, g.chars.map(c => h('th', { class: 'oh', text: c.ch }))), h('tr', null, g.chars.map(c => h('td', null, [h('span', { class: 'use', 'data-u': c.use, text: c.use }), ' ', c.read || '']))), h('tr', { class: 'hun' }, g.chars.map(c => { const i = HJ.chars[c.ch]; return h('td', { text: i ? `${i.hun} ${i.eum}` : '' }); }))]));
     if (g.readings && g.readings.length) kids.push(h('p', { class: 'gl-rd' }, [h('b', { text: '학설: ' }), g.readings.map(x => `${x.by} '${x.r}'`).join(' \u00B7 ')]));
     if (g.parts && g.parts.length) kids.push(h('p', { class: 'gl-p' }, g.parts.flatMap((pt, i) => [i ? ' + ' : '', h('span', { class: 'pt-i' }, [pt.focus != null ? txt(pt.focus, ctx, 'oh') : h('span', { class: 'oh', text: String.fromCodePoint(parseInt(pt.jamo, 16)) }), h('small', { text: ` ${pt.fn}` })])])));
     const seeG = g.see ? glossById(t, g.see) : null; const note = g.note || (seeG && seeG.note);
@@ -2468,8 +2482,7 @@ function readBlock(t, ctx, V) {
   return h('div', { class: 'tx-read' }, t.passages.map(pg => h('div', { class: 'tp' }, [h('h3', { class: 'tp-h' }, [h('span', { class: 'pid', text: pg.pid }), pg.title || '']),
     ...pg.units.map(u => {
       const s0 = unitText(u); const hasTone = TONE_RE.test(s0); TONE_RE.lastIndex = 0;
-      const line = h('div', { class: 'tu' + (core.has(unitKey(u)) ? ' core' : '') + (u.layer ? ' L-' + u.layer : ''), 'data-u': unitKey(u) }, [u.layer ? h('span', { class: 'ul', text: u.layer }) : u.verse ? h('span', { class: 'ul', text: `${u.verse}구` }) : u.s ? h('span', { class: 'ul n', text: `${u.s}` }) : null, h('div', { class: 'ut' }, txt(s0, ctx, 'oh'))]);
-      if (u.layer === '원문') hanjify(line.querySelector('.ut'));
+      const line = h('div', { class: 'tu' + (core.has(unitKey(u)) ? ' core' : '') + (u.layer ? ' L-' + u.layer : ''), 'data-u': unitKey(u) }, [u.layer ? h('span', { class: 'ul', text: u.layer }) : u.verse ? h('span', { class: 'ul', text: `${u.verse}구` }) : u.s ? h('span', { class: 'ul n', text: `${u.s}` }) : null, h('div', { class: 'ut' }, txtH(s0, ctx, 'oh'))]);
       const pr = []; if (u.cuts && u.cuts.length) pr.push(tCutWidget(t, u, ctx, V)); if (hasTone) pr.push(toneWidget({ id: t.id }, { no: unitKey(u), raw: s0 }, ctx));
       return [line, ...pr]; })])));
 }
@@ -2478,7 +2491,6 @@ function annoBlock(t, ctx, V) {
   const core = coreKeys(t); const gi = glossIndex(t);
   return h('div', { class: 'tx' + (V.guessMode ? ' gm' : '') }, t.passages.map(pg => h('div', { class: 'tp' }, [h('h3', { class: 'tp-h' }, [h('span', { class: 'pid', text: pg.pid }), pg.title || '']),
     ...pg.units.map(u => { const line = h('div', { class: 'tu' + (core.has(unitKey(u)) ? ' core' : '') + (u.layer ? ' L-' + u.layer : ''), 'data-u': unitKey(u) }, [u.layer ? h('span', { class: 'ul', text: u.layer }) : u.verse ? h('span', { class: 'ul', text: `${u.verse}구` }) : u.s ? h('span', { class: 'ul n', text: `${u.s}` }) : null, h('div', { class: 'ut' }, unitWords(t, u, ctx, V))]);
-      if (u.layer === '원문' && !gi[u.rid]) hanjify(line.querySelector('.ut'));
       return line; })])));
 }
 function pairsBlock(t, ctx, V) {
