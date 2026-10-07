@@ -859,6 +859,10 @@ body.print-ans .tx-ans{display:block}
 .trview .trl{margin:3px 0 0;font-size:13px}
 @media print{ body[data-print-mode="student"] .trview{display:none!important} .upr[hidden] .trview,.trview[hidden]{display:block} }
 
+.trview .trl0{margin:0 0 3px;font-size:14px;color:var(--ink2)}
+.tx.hide-hyeopju .tu.L-협주,.tx.hide-hyeopju .tu.L-협주+.upr{display:none}
+@media print{ .tx.hide-hyeopju .tu.L-협주{display:flex} }
+
 </style>
 </head>
 <body>
@@ -2622,7 +2626,8 @@ function transBlock(t, ctx, V) {
 }
 // ⑤ 내용과 생각
 function evText(e) { const c = tcl(e.rid); if (!c.length) return ''; if (e.focus) return e.focus; if ('syl' in e) return c.slice(e.syl[0], e.syl[1] + 1).join(''); if ('tok' in e) { const w = twords(e.rid)[e.tok - 1]; return w ? c.slice(w.a, w.b + 1).join('') : ''; } const str = c.join(''); return str.length > 40 ? str.slice(0, 40) + '\u2026' : str; }
-function evMark(V, evs) { evs.forEach(e => { if ('syl' in e || 'tok' in e) { const k = posKey(e); V.words.forEach(sp => { if (sp.dataset.key === k) sp.classList.add('ev'); }); } else V.root.querySelectorAll(`.tu[data-u^="${e.rid}|"]`).forEach(x => x.classList.add('ev')); }); }
+function evMark(V, evs) { if (evs.some(e => V.root.querySelector(`.tu.L-협주[data-u^="${e.rid}|"]`))) { V.root.classList.remove('hide-hyeopju'); const bt = V.root.closest('.txbox') && [...V.root.closest('.txbox').querySelectorAll('.txbar .tbtn')].find(b => b.textContent === '협주 보기'); if (bt) bt.setAttribute('aria-checked', 'true'); }
+  evs.forEach(e => { if ('syl' in e || 'tok' in e) { const k = posKey(e); V.words.forEach(sp => { if (sp.dataset.key === k) sp.classList.add('ev'); }); } else V.root.querySelectorAll(`.tu[data-u^="${e.rid}|"]`).forEach(x => x.classList.add('ev')); }); }
 function qBlock(t, ctx, V) {
   return h('div', { class: 'tx-q' }, t.questions.map((q, i) => {
     const key = `${t.id}/q/${q.qid}`; let spec;
@@ -2693,7 +2698,7 @@ function textView(t) {
   // 본문 박스: 통독·어절 주석·층위 렌즈가 한 박스에서 이어진다. 번역·끊어 읽기·방점 읽기는 문장 끝 단추로 펼치는 '연습'.
   const trIdx = new Map(t.translations.map((tr, i) => [unitKey(tr), i]));
   // 현대어 해설: 문장 아래에 모범 번역(+직역·읽기 도움)을 바로 보여 준다. 처음 열면 '봤음'으로 기록(완독 진행에 쓰임)
-  const trViewOf = (tr, k) => { const key = `${t.id}/tr/${k}`; const el = h('div', { class: 'trview' }, [h('p', { class: 'trm' }, [h('b', { text: '현대어 ' }), tr.modern]), tr.literal ? h('p', { class: 'muted trl', text: `직역: ${tr.literal}` }) : null, tr.hint ? h('p', { class: 'muted trl', text: `읽기 도움: ${tr.hint}` }) : null]);
+  const trViewOf = (tr, k) => { const key = `${t.id}/tr/${k}`; const el = h('div', { class: 'trview' }, [tr.literal ? h('p', { class: 'trl0' }, [h('b', { text: '직역 ' }), tr.literal]) : null, h('p', { class: 'trm' }, [h('b', { text: '현대어 ' }), tr.modern]), tr.hint ? h('p', { class: 'muted trl', text: `읽기 도움: ${tr.hint}` }) : null]);
     el.onView = () => { const cur = store.get('text', key) || {}; if (!cur.viewed) { store.set('text', key, { ...cur, viewed: true }); V.progress(); } }; return el; };
   V.prBtns = [];
   V.unitExtras = u => {
@@ -2724,8 +2729,10 @@ function textView(t) {
   const guessBtn = tb('먼저 추측', V.guessMode, '주석을 열기 전에, 지금 말과 다른 점(층위·세부 항목)을 먼저 고릅니다', v => { V.guessMode = v; anno.classList.toggle('gm', v); tset(t.id, 'meta', 'guess', v); });
   const ilBtn = tb('현대어 함께 보기', false, '어절 아래에 현대어 뜻을 함께 보입니다', v => anno.classList.toggle('il', v));
   const prBtn = tb('해설 모두 보기', false, '모든 문장의 현대어 해설을 펼칩니다(문장 끝 단추로 하나씩도 가능)', v => { anno.classList.toggle('pr-all', v); if (v) anno.querySelectorAll('.trview').forEach(e => e.onView && e.onView()); });
+  const hasHJ = flatUnits(t).some(u => u.layer === '협주'); if (hasHJ) anno.classList.add('hide-hyeopju');
+  const hjBtn = hasHJ ? tb('협주 보기', false, '원문에 작은 글자로 끼워 넣은 낱말 풀이(협주)를 본문에 함께 보입니다', v => anno.classList.toggle('hide-hyeopju', !v)) : null;
   const pairBtn = pairsEl ? tb('나란히 보기', false, '같은 자리의 판본을 나란히 놓고 봅니다', v => { pairsEl.hidden = !v; anno.hidden = v; }) : null;
-  const txbar = h('div', { class: 'txbar' }, [markBtn, guessBtn, ilBtn, prBtn, pairBtn, lens.bar]);
+  const txbar = h('div', { class: 'txbar' }, [markBtn, guessBtn, ilBtn, prBtn, hjBtn, pairBtn, lens.bar]);
   add(sec, [
     h('div', { class: 'lhead' }, [h('div', { class: 'lid tx-lid', text: t.era }), h('div', { style: 'min-width:0' }, [h('h1', { text: t.title }), h('p', { class: 'sub', text: `${t.role === '대표' ? '시대 대표 텍스트' : '심화 텍스트'} \u00B7 ${works.join(' \u00B7 ')}` }),
       h('div', { class: 'chips' }, [h('span', { class: 'chip', text: t.role === '대표' ? '한 편 완독 과제' : '비계를 줄인 심화 읽기' }), ...unv.map(x => h('span', { class: 'chip unv', title: x.verified, text: `영인 미대조: ${x.work}` })), ...(t.deepen || []).map(d => TXBY[d] ? h('a', { class: 'chip link', href: `#${d}`, text: `심화 \u2192 ${TXBY[d].title}` }) : null)]),
