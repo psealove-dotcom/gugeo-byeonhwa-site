@@ -794,6 +794,26 @@ body.print-ans .tx-ans{display:block}
   .tx-ans th,.tx-ans td{border:1px solid #bbb;padding:2px 5px;vertical-align:top;text-align:left}
 }
 
+/* ── v4-2: 어절 추측 = 층위·세부 항목 고르기 ─────── */
+.gl .tagrow{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0}
+.gl .tag{border:1px solid var(--line2);background:#faf8f3;border-radius:999px;padding:2px 10px;cursor:pointer;font-size:12.5px}
+.gl .tag.lay[data-l="음운"].sel{background:var(--L-음운);border-color:var(--L-음운);color:#fff}
+.gl .tag.lay[data-l="표기"].sel{background:var(--L-표기);border-color:var(--L-표기);color:#fff}
+.gl .tag.lay[data-l="문법"].sel{background:var(--L-문법);border-color:var(--L-문법);color:#fff}
+.gl .tag.lay[data-l="어휘"].sel{background:var(--L-어휘);border-color:var(--L-어휘);color:#fff}
+.gl .tag.same.sel{background:var(--ink2);border-color:var(--ink2);color:#fff}
+.gl .gq-row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0;padding:4px 6px;background:#f6f3ec;border-radius:6px}
+.gl .tag.sub{font-size:12px;padding:1px 8px}
+.gl .tag.sub.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.gl .gl-g.part{background:#fff3c4;color:#7a5a00}
+.gl .gl-g.wrong{background:var(--no-bg);color:var(--no)}
+.gl .gq-r{display:inline-flex;flex-wrap:wrap;gap:3px;align-items:center;margin-right:8px;font-size:12px}
+.gl .ltag.ok{outline:1.5px solid var(--ok)}
+.gl .ltag.miss{outline:1.5px dashed var(--ok)}
+.gl .ltag.no{opacity:.6;text-decoration:line-through}
+.w.part .g{border-bottom-color:#d9a441}
+.w.miss .g{border-bottom-color:var(--no)}
+
 </style>
 </head>
 <body>
@@ -2345,7 +2365,7 @@ function wordEl(t, pos, text, g, ctx, V) {
   V.words.push(sp);
   return sp;
 }
-function markWord(sp, r) { sp.classList.add('seen'); sp.classList.toggle('hit', r.hit === true); sp.classList.toggle('miss', r.hit === false); }
+function markWord(sp, r) { sp.classList.add('seen'); sp.classList.toggle('hit', r.hit === true); sp.classList.toggle('part', !!r.part); sp.classList.toggle('miss', r.hit === false && !r.part); }
 function unitWords(t, u, ctx, V) {
   const rid = u.rid, c = tcl(rid), gi = glossIndex(t)[rid] || { syl: {}, tok: {} };
   const [a, b] = u.syl || [0, c.length - 1]; const out = []; const tokMode = Object.keys(gi.tok).length > 0 || (!Object.keys(gi.syl).length && /\s/.test(tsText(rid)));   // 주석이 어절 번호면 어절 방식, 음절 범위면 음절 방식(향가처럼 줄바꿈만 있는 글 포함)
@@ -2379,17 +2399,50 @@ function openGloss(t, g, anchor, ctx, V) {
     if (lks.length) kids.push(h('div', { class: 'gl-k' }, lks));
     return kids;
   };
-  const guessLine = rr => rr && rr.my ? h('p', { class: 'gl-g ' + (rr.hit ? 'right' : 'wrong'), text: `${rr.hit ? '\u25CB' : '\u25B3'} 내 추측: ${rr.my}` }) : null;
+  const tagName = k => { const i = k.indexOf(':'); return i > 0 ? k.slice(i + 1) : k; };
+  const tagEl = (k, cls) => { const lay = k.split(':')[0]; return h('span', { class: 'ltag ' + (cls || ''), 'data-l': lay, text: tagName(k) }); };
+  const guessLine = rr => {
+    if (!rr || !rr.seen || rr.hit == null && !rr.picks && !rr.my) return null;
+    if (rr.my) return h('p', { class: 'gl-g ' + (rr.hit ? 'right' : 'wrong'), text: `${rr.hit ? '\u25CB' : '\u25B3'} 내 추측: ${rr.my}` });
+    if (!rr.picks) return null;
+    const truth = new Set(g.layers || []); const P = rr.picks || [];
+    const hit = P.filter(k => truth.has(k)), extra = P.filter(k => !truth.has(k)), miss = [...truth].filter(k => !P.includes(k));
+    const mark = rr.hit ? '\u25CB 다 맞혔어요' : rr.part ? '\u25B3 일부 맞혔어요' : '\u00D7 다시 보세요';
+    return h('div', { class: 'gl-g ' + (rr.hit ? 'right' : rr.part ? 'part' : 'wrong') }, [h('b', { text: mark + ' ' }),
+      rr.same ? h('span', { class: 'gq-r' }, [truth.size ? '"거의 같다"고 보았지만 다른 점이 있어요 ' : '지금 말과 거의 같아요 ']) : null,
+      hit.length ? h('span', { class: 'gq-r' }, ['맞힘 ', ...hit.map(k => tagEl(k, 'ok'))]) : null,
+      miss.length ? h('span', { class: 'gq-r' }, ['놓침 ', ...miss.map(k => tagEl(k, 'miss'))]) : null,
+      extra.length ? h('span', { class: 'gq-r' }, ['해당 없음 ', ...extra.map(k => tagEl(k, 'no'))]) : null]);
+  };
+  const widen = () => { const pp = document.querySelector('.pop'); if (!pp) return; const pw = Math.min(500, innerWidth - 24); pp.style.width = pw + 'px'; const left = parseFloat(pp.style.left) || 0; if (left + pw > scrollX + innerWidth - 12) pp.style.left = Math.max(12, scrollX + innerWidth - pw - 12) + 'px'; };
   if (needGuess) {
-    const inp = h('input', { class: 'txt', type: 'text', placeholder: '이 말의 뜻을 짐작해서 쓰기', 'aria-label': '뜻 추측', autocomplete: 'off' });
-    const show = my => { const hit = my ? (normK(g.modern).includes(normK(my)) || normK(my).includes(normK(g.modern))) : null; const saved = { my: my || '', seen: true, hit: my ? hit : null }; tset(t.id, 'guess', g.gid, saved); markWord(anchor, saved); body.textContent = ''; add(body, [head, guessLine(saved), ...detail()]); V.progress(); };
-    add(body, [head, h('p', { class: 'step', text: '먼저 추측해 보세요' }), inp, h('div', { class: 'q-a', style: 'margin-left:0' }, [h('button', { type: 'button', class: 'btn', text: '확인', onclick: () => show(inp.value.trim()) }), h('button', { type: 'button', class: 'btn ghost', text: '그냥 보기', onclick: () => show('') })])]);
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') show(inp.value.trim()); });
-    showPop(anchor, [body]); setTimeout(() => inp.focus(), 0);
+    const used = new Set(t.glosses.flatMap(x => x.layers || []));
+    const tagsOf = lay => ((t.lenses.tags || {})[lay] || []).filter(x => used.has(`${lay}:${x}`));
+    const truth = new Set(g.layers || []); const picks = new Set(); const sub = h('div', { class: 'gq-sub' });
+    const same = h('button', { type: 'button', class: 'tag same', text: '지금 말과 거의 같다', onclick: () => { same.classList.toggle('sel'); if (same.classList.contains('sel')) { picks.clear(); layBtns.forEach(b => b.classList.remove('sel')); drawSub(); } sync(); } });
+    const layBtns = LAYERS.map(lay => h('button', { type: 'button', class: 'tag lay', 'data-l': lay, text: lay, onclick: e => { e.currentTarget.classList.toggle('sel'); same.classList.remove('sel'); if (!e.currentTarget.classList.contains('sel')) [...picks].filter(k => k.startsWith(lay + ':')).forEach(k => picks.delete(k)); drawSub(); } }));
+    const go = h('button', { type: 'button', class: 'btn', text: '해설 보기', disabled: true, onclick: () => grade(false) });
+    const sync = () => { go.disabled = !(picks.size || same.classList.contains('sel')); };
+    const drawSub = () => { sub.textContent = '';
+      LAYERS.filter(l => layBtns[LAYERS.indexOf(l)].classList.contains('sel')).forEach(lay => { const tg = tagsOf(lay);
+        sub.appendChild(h('div', { class: 'gq-row' }, [lb(lay), ...(tg.length ? tg.map(tag => { const k = `${lay}:${tag}`; return h('button', { type: 'button', class: 'tag sub' + (picks.has(k) ? ' sel' : ''), 'data-l': lay, text: tag, onclick: e => { if (picks.has(k)) picks.delete(k); else picks.add(k); e.currentTarget.classList.toggle('sel', picks.has(k)); sync(); } }); }) : [h('span', { class: 'muted', text: '이 글에서는 이 층위의 항목이 없어요' })])])); });
+      sync(); };
+    const grade = skip => {
+      const P = skip ? [] : [...picks]; const sameOn = !skip && same.classList.contains('sel');
+      const hit = P.filter(k => truth.has(k)), extra = P.filter(k => !truth.has(k));
+      const perfect = !skip && (truth.size ? (hit.length === truth.size && !extra.length && !sameOn) : (sameOn && !P.length));
+      const part = !skip && !perfect && (hit.length > 0 || (sameOn && !truth.size));
+      const saved = { picks: P, same: sameOn, seen: true, hit: skip ? null : perfect, part };
+      tset(t.id, 'guess', g.gid, saved); markWord(anchor, saved);
+      body.textContent = ''; add(body, [head, guessLine(saved), ...detail()]); V.progress(); };
+    add(body, [head, h('p', { class: 'step', text: '이 어절은 지금 말과 어디가 다를까요? 층위를 고르고 세부 항목을 눌러 보세요(여럿 가능)' }),
+      h('div', { class: 'tagrow gq-lay' }, [...layBtns, same]), sub,
+      h('div', { class: 'q-a', style: 'margin-left:0' }, [go, h('button', { type: 'button', class: 'btn ghost', text: '모르겠어요', onclick: () => grade(true) })])]);
+    showPop(anchor, [body]); widen();
   } else {
-    if (!r.seen && g.guess) { const saved = { my: '', seen: true, hit: null }; tset(t.id, 'guess', g.gid, saved); markWord(anchor, saved); V.progress(); }
+    if (!r.seen && g.guess) { const saved = { picks: [], seen: true, hit: null }; tset(t.id, 'guess', g.gid, saved); markWord(anchor, saved); V.progress(); }
     add(body, [head, guessLine(r), ...detail()]);
-    showPop(anchor, [body]);
+    showPop(anchor, [body]); widen();
   }
 }
 // ① 통독: 단락별 큰 글자 + 끊어 읽기·방점 읽기 연습(접힘)
@@ -2538,7 +2591,7 @@ function textProgress(t) {
   const qOk = t.questions.filter(q => (store.get('text', `${t.id}/q/${q.qid}`) || {}).correct).length, qDone = t.questions.filter(q => (store.get('text', `${t.id}/q/${q.qid}`) || {}).done).length;
   const steps = [
     { name: '끊어 읽기', ok: cutUnits.length === 0 || cutsDone === cutUnits.length, txt: cutUnits.length ? `${cutsDone}/${cutUnits.length}` : '해당 없음' },
-    { name: '어절 추측', ok: gg.length === 0 || seen / gg.length >= 0.8, txt: gg.length ? `${seen}/${gg.length}` : '해당 없음' },
+    { name: '어절 추측', ok: gg.length === 0 || seen / gg.length >= 0.8, txt: gg.length ? `${seen}/${gg.length}` + (gg.length && seen ? ` (맞힘 ${gg.filter(g => ((rec.guess || {})[g.gid] || {}).hit === true).length})` : '') : '해당 없음' },
     { name: reqAll ? '번역 전체' : '핵심 구간 번역', ok: trs.length === 0 || trDone === trs.length, txt: `${trDone}/${trs.length}` },
     { name: '내용 문항', ok: qOk >= Math.min(3, t.questions.length), txt: `${qOk}/${t.questions.length} 정답` }];
   const all = steps.every(x => x.ok); const started = cutsDone || seen || trDone || qDone;
@@ -2593,7 +2646,7 @@ function textView(t) {
   V.togglePick = sp => { const k = sp.dataset.key; if (!k) return; if (V.picked.has(k)) V.picked.delete(k); else V.picked.add(k); sp.classList.toggle('pick', V.picked.has(k)); V.onFindChange.forEach(f => f()); };
   V.onFindChange.push(() => { findbar.hidden = !V.find; findbar.textContent = ''; if (!V.find) return; add(findbar, [h('span', null, [h('b', { text: '본문에서 찾기 ' }), `${V.find.task.q} \u2014 ${V.picked.size}개 선택`]), h('button', { type: 'button', class: 'btn pri', text: '확인', disabled: !V.picked.size, onclick: () => V.find.grade() }), h('button', { type: 'button', class: 'btn ghost', text: '멈춤', onclick: () => { store.set('text', V.find.key, { ...(store.get('text', V.find.key) || {}), picked: [...V.picked], done: false }); V.endFind(); } })]); });
   const lens = lensBlock(t, ctx, V);
-  const guessBtn = h('button', { type: 'button', class: 'tbtn', 'aria-checked': String(V.guessMode), text: '먼저 추측', title: '주석을 열기 전에 뜻을 먼저 적어 봅니다', onclick: () => { V.guessMode = !V.guessMode; guessBtn.setAttribute('aria-checked', String(V.guessMode)); anno.classList.toggle('gm', V.guessMode); tset(t.id, 'meta', 'guess', V.guessMode); } });
+  const guessBtn = h('button', { type: 'button', class: 'tbtn', 'aria-checked': String(V.guessMode), text: '먼저 추측', title: '주석을 열기 전에, 지금 말과 다른 점(층위·세부 항목)을 먼저 고릅니다', onclick: () => { V.guessMode = !V.guessMode; guessBtn.setAttribute('aria-checked', String(V.guessMode)); anno.classList.toggle('gm', V.guessMode); tset(t.id, 'meta', 'guess', V.guessMode); } });
   const ilBtn = h('button', { type: 'button', class: 'tbtn', 'aria-checked': 'false', text: '현대어 함께 보기', onclick: () => { const on = anno.classList.toggle('il'); ilBtn.setAttribute('aria-checked', String(on)); } });
   add(sec, [
     h('div', { class: 'lhead' }, [h('div', { class: 'lid tx-lid', text: t.era }), h('div', { style: 'min-width:0' }, [h('h1', { text: t.title }), h('p', { class: 'sub', text: `${t.role === '대표' ? '시대 대표 텍스트' : '심화 텍스트'} \u00B7 ${works.join(' \u00B7 ')}` }),
@@ -2603,7 +2656,7 @@ function textView(t) {
     h('h2', { class: 'sec' }, ['\u2460 통독 ', h('small', { text: '전체를 소리 내어 읽습니다. 붙여 쓴 글은 끊어 읽기, 방점이 있는 글은 방점 읽기를 해 봅니다. 띠가 있는 곳이 핵심 구간' })]),
     readBlock(t, ctx, V),
     t.pairs ? [h('h2', { class: 'sec' }, ['판본 견주기 ', h('small', { text: '같은 자리의 글을 나란히 놓았습니다. 어절을 누르면 주석이 열립니다' })]), pairsBlock(t, ctx, V)] : null,
-    h('h2', { class: 'sec' }, ['\u2461 어절 주석 ', h('small', { text: '어절을 누르면 뜻과 형태가 열립니다. 점선 밑줄은 먼저 추측해 볼 어절' })]),
+    h('h2', { class: 'sec' }, ['\u2461 어절 주석 ', h('small', { text: "어절을 누르면 뜻과 형태가 열립니다. 점선 밑줄은 '지금 말과 어디가 다른지' 먼저 골라 볼 어절" })]),
     h('div', { class: 'txbar' }, [guessBtn, ilBtn, lens.bar]),
     anno, findbar,
     h('h2', { class: 'sec' }, ['\u2462 층위 렌즈 ', h('small', { text: '렌즈를 켜고 본문에서 그 층위의 어절을 관찰합니다' })]),
