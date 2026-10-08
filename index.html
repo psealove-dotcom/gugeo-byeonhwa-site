@@ -1223,6 +1223,57 @@ dialog.big .big-txt.in{animation:bigIn .3s ease-out}
 @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important} }
 @media (max-width:900px){ .tcover .book.big{min-height:250px} }
 
+
+/* ══ v5.1 · 차례 레일 · 여백 원문 · 쪽 이동 바 · 렌즈 인장 ═══════════════════════════ */
+:root{--railw:252px}
+body.has-rail{padding-left:var(--railw)} body.has-rail.rail-min{--railw:56px}
+body.has-rail .top .brand{display:none}
+.rail{position:fixed;left:0;top:0;bottom:0;width:var(--railw);background:var(--accent);color:#E9E4D6;z-index:40;display:flex;flex-direction:column;padding:20px 20px 16px;font-family:var(--serif);overflow:hidden}
+.rail[hidden]{display:none}
+.rail .rl-mark{width:38px;height:38px;border:1.5px solid #E89B93;color:#F2C4BE;display:grid;place-items:center;font-size:21px;font-weight:600;text-decoration:none;flex:none}
+.rail .rl-brand{margin:12px 0 0;line-height:1.25} .rail .rl-brand b{display:block;font-size:20px;color:#fff;font-weight:600} .rail .rl-brand span{font-size:14px;color:#C9C3B6;letter-spacing:.08em}
+.rail hr{border:0;border-top:1px solid rgba(255,255,255,.22);margin:16px 0 14px;width:100%}
+.rail .rl-era{font-size:17px;font-weight:600;color:#fff} .rail .rl-ttl{font-size:14px;margin-top:3px} .rail .rl-src{font-size:12px;color:#B9B3A6;margin:2px 0 12px}
+.rail .rl-list{list-style:none;margin:0 -20px;padding:0 20px;overflow:auto;flex:1;min-height:0}
+.rail .rl-list li button{display:flex;gap:12px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;color:#D9D3C6;font:inherit;font-size:13.5px;line-height:1.35;padding:7px 10px;cursor:pointer}
+.rail .rl-list li button b{font-family:var(--sans);font-weight:500;color:#9FB1CF;min-width:1.7em;font-size:12px;letter-spacing:.04em;padding-top:1px;flex:none}
+.rail .rl-list li button:hover{color:#fff}
+.rail .rl-list li.cur button{background:#F4EFE3;color:var(--ink);border-left-color:var(--jusa);margin-left:-20px;padding-left:27px;width:calc(100% + 40px)}
+.rail .rl-list li.cur button b{color:var(--jusa)}
+.rail .rl-back{margin-top:auto;font-size:13px;color:#C9C3B6;border-top:1px solid rgba(255,255,255,.22);padding-top:12px;text-decoration:none;display:flex;gap:8px}
+.rail .rl-back:hover{color:#fff}
+.rail .rl-tog{position:absolute;right:8px;top:24px;width:26px;height:26px;border:1px solid rgba(255,255,255,.35);background:none;color:#E9E4D6;cursor:pointer;font-size:14px;line-height:1;border-radius:2px}
+.rail .rl-tog:hover{border-color:#fff}
+.rail.min{padding:16px 9px 14px;align-items:center}
+.rail.min .rl-brand,.rail.min .rl-era,.rail.min .rl-ttl,.rail.min .rl-src,.rail.min .rl-list li button span,.rail.min .rl-back .lb{display:none}
+.rail.min .rl-mark{width:34px;height:34px;font-size:18px}
+.rail.min hr{margin:12px 0 8px}
+.rail.min .rl-list{width:100%;margin:0;padding:0} .rail.min .rl-list li button{justify-content:center;padding:7px 0;border-left:0;margin:0;width:100%}
+.rail.min .rl-list li.cur button{margin:0;padding:7px 0;width:100%}
+.rail.min .rl-tog{position:static;margin-top:10px}
+.rail.min .rl-back{justify-content:center;width:100%}
+/* 여백 원문: 읽기 영역(main) 바깥 양쪽 여백에만, 7% 농도 */
+.wm{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;opacity:.07;color:var(--ink);font-family:var(--serif)}
+.wm[hidden]{display:none}
+.wm .wm-c{position:absolute;top:-24px;bottom:-24px;writing-mode:vertical-rl;font-size:26px;line-height:1.1;letter-spacing:.08em;white-space:nowrap;display:none}
+.wm .wm-c.on{display:block}
+/* 쪽 이동 바 */
+.txbox.book .pgnav{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0;padding:12px 18px 6px;border-top:1px solid var(--line)}
+.pgnav .turn{width:auto;height:auto;border:0;background:none;padding:10px 14px;font-family:var(--serif);font-size:15px;color:var(--ink2);letter-spacing:.02em;border-radius:2px}
+.pgnav .turn:hover{color:var(--ink);border:0}
+.pgnav .turn.next{background:var(--accent);color:#fff;padding:11px 24px;letter-spacing:.04em}
+.pgnav .turn.next:hover{background:#1D3050;color:#fff}
+.pgnav .turn:disabled{opacity:.35;cursor:default} .pgnav .turn.next:disabled{background:var(--line2);color:#fff;opacity:.7}
+.pgnav .pgno{display:flex;flex-direction:column;align-items:center;gap:1px;font-family:var(--sans);letter-spacing:.14em;color:var(--muted);font-size:13px}
+.pgnav .pgno b{color:var(--ink);font-size:16px;font-weight:600;margin:0;letter-spacing:.14em} .pgnav .pgno small{font-size:11.5px;letter-spacing:.02em;color:var(--muted);font-family:var(--serif)}
+/* 렌즈 인장 音表文語 */
+.lensbar .lbtn.seal{display:inline-flex;flex-direction:column;align-items:center;gap:0;padding:3px 9px 2px;min-width:44px;line-height:1.1;vertical-align:middle}
+.lensbar .lbtn.seal .hz{font-size:17px;font-weight:600;font-family:var(--serif)} .lensbar .lbtn.seal .kr{font-size:10px;letter-spacing:.06em;font-family:var(--sans);font-weight:500;opacity:.85}
+/* 방주 머리: 선택한 어절을 크게, 주사 밑줄 */
+.bangju-slot .gl .gl-h .f{font-size:38px;line-height:1.3;border-bottom:3px solid var(--jusa);padding-bottom:2px}
+@media (max-width:1099px){ .rail,.wm{display:none!important} body.has-rail{padding-left:0} }
+@media print{ .rail,.wm{display:none!important} body.has-rail{padding-left:0!important} }
+
 </style>
 </head>
 <body>
@@ -2942,7 +2993,8 @@ function lensBlock(t, ctx, V) {
   const tags = t.lenses.tags || {}, tasks = t.lenses.tasks || {};
   const used = new Set(t.glosses.flatMap(g => g.layers || []));
   const panel = h('div', { class: 'lens-panel' });
-  const btns = LAYERS.map(lay => h('button', { type: 'button', class: 'lbtn', 'data-l': lay, 'aria-pressed': 'false', text: lay, onclick: () => setLens(lay) }));
+  const HJL = { 음운: '\u97F3', 표기: '\u8868', 문법: '\u6587', 어휘: '\u8A9E' };   // 音 表 文 語 — 인장 한 글자 + 한글 라벨
+  const btns = LAYERS.map(lay => h('button', { type: 'button', class: 'lbtn seal', 'data-l': lay, 'aria-pressed': 'false', title: `${lay} 렌즈`, onclick: () => setLens(lay) }, [h('b', { class: 'hz', text: HJL[lay] || lay[0] }), h('span', { class: 'kr', text: lay })]));
   const bar = h('span', { class: 'lensbar' }, [h('span', { class: 'muted', text: '렌즈 ' }), ...btns]);
   function applySub() { V.root.classList.toggle('sub', !!V.subTag); V.words.forEach(sp => sp.classList.toggle('subhit', !!(V.subTag && sp._layers && sp._layers.includes(V.subTag)))); }
   function setLens(lay, force) { V.lens = (!force && V.lens === lay) ? null : lay; V.subTag = null; applySub(); btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === V.lens))); LAYERS.forEach(l => V.root.classList.toggle('lens-' + l, V.lens === l)); V.words.forEach(sp => sp.classList.remove('fright', 'fwrong', 'fmiss')); if (V.drawer) { V.drawer.hidden = V.mode === 'book' ? false : !V.lens; V.main.classList.toggle('with-drawer', !!V.lens); } drawPanel(); if (force && V.drawer) V.drawer.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
@@ -3111,7 +3163,7 @@ function bookEl(t, opts) {
 function textView(t) {
   const ctx = { locked: false };
   const meta0 = trec(t.id).meta || {};
-  const V = { tid: t.id, rec: () => trec(t.id), words: [], find: null, picked: new Set(), lens: null, guessMode: meta0.guess != null ? !!meta0.guess : t.role === '대표', onFindChange: [], progress: () => {} };
+  const V = { tid: t.id, rec: () => trec(t.id), words: [], find: null, picked: new Set(), lens: null, guessMode: meta0.guess != null ? !!meta0.guess : t.role === '대표', onFindChange: [], progress: () => {} }; t._V = V;
   const srcs = [...new Set(flatUnits(t).map(u => u.rid))].map(r => TSRC[r]).filter(Boolean);
   const unv = [...new Map(srcs.filter(x => /^미대조/.test(x.verified || '')).map(x => [x.work, x])).values()];
   const works = [...new Set(srcs.map(x => `${x.work || ''}${x.year ? ` (${x.year})` : ''}`))];
@@ -3149,7 +3201,7 @@ function textView(t) {
   const drawer = h('aside', { class: 'lens-drawer', hidden: true }, [bangju, lens.panel, haeBox]); V.drawer = drawer;
   const pairsEl = pairsBlock(t, ctx, V); if (pairsEl) pairsEl.hidden = true;
   const pgnav = h('div', { class: 'pgnav' }); const pghead = h('div', { class: 'pghead' });
-  const txcol = h('div', { class: 'txcol' }, [pghead, anno, pairsEl, pgnav]);
+  const txcol = h('div', { class: 'txcol' }, [pghead, anno, pairsEl]);
   const main = h('div', { class: 'txmain' }, [txcol, drawer]); V.main = main;
   const tb = (label, on, title, fn) => { const bt = h('button', { type: 'button', class: 'tbtn', 'aria-checked': String(on), text: label, title, onclick: () => { const v = bt.getAttribute('aria-checked') !== 'true'; bt.setAttribute('aria-checked', String(v)); fn(v); } }); return bt; };
   const markBtn = tb('주석 표시', mark0, '먼저 추측해 볼 어절에 점선 밑줄을 보입니다(수업 통독 때는 끄기)', v => { anno.classList.toggle('mark', v); tset(t.id, 'meta', 'mark', v); });
@@ -3198,9 +3250,11 @@ function textView(t) {
     const pg = pages[pageNo];
     pghead.textContent = ''; add(pghead, [h('span', { class: 'pid', text: pg.pid }), h('b', { text: pg.title }), pages.length > 1 ? h('span', { class: 'pgn', text: `${HANNUM(pageNo + 1)} / ${HANNUM(pages.length)}` }) : null]);
     pgnav.textContent = ''; pgnav.classList.toggle('one', pages.length < 2);
-    add(pgnav, [h('button', { type: 'button', class: 'turn prev', 'aria-label': '앞 쪽', disabled: pageNo === 0, onclick: () => showPage(pageNo - 1, -1) }, '\u2039'),
-      h('span', { class: 'pgno' }, [h('b', { text: `${HANNUM(pageNo + 1)} / ${HANNUM(pages.length)}` }), h('small', { text: ` ${pg.pid} ${pg.title}` })]),
-      h('button', { type: 'button', class: 'turn next', 'aria-label': '다음 쪽', disabled: pageNo === pages.length - 1, onclick: () => showPage(pageNo + 1, 1) }, '\u203A')]);
+    const PN = n => String(n).padStart(2, '0');
+    add(pgnav, [h('button', { type: 'button', class: 'turn prev', 'aria-label': '앞 쪽', disabled: pageNo === 0, onclick: () => showPage(pageNo - 1, -1) }, [h('span', { class: 'ar', text: '\u2190 ' }), '이전 쪽']),
+      h('span', { class: 'pgno' }, [h('span', { class: 'num' }, [h('b', { text: PN(pageNo + 1) }), h('span', { class: 'of', text: ` / ${PN(pages.length)}` })]), h('small', { text: `${pg.pid} ${pg.title}` })]),
+      h('button', { type: 'button', class: 'turn next', 'aria-label': '다음 쪽', disabled: pageNo === pages.length - 1, onclick: () => showPage(pageNo + 1, 1) }, ['다음 쪽', h('span', { class: 'ar', text: ' \u2192' })])]);
+    if (state.view === t.id && V.curPids) railCur(V.curPids());
     txcol.dataset.pansim = `${t.title} \u00B7 ${HANNUM(pageNo + 1)}`; drawer.dataset.pansim = `\u8A3B \u00B7 ${HANNUM(pageNo + 1)}`;
     haeBox.open = false; haeDraw();
     if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) { txcol.classList.remove('turn-l', 'turn-r'); void txcol.offsetWidth; txcol.classList.add(dir > 0 ? 'turn-r' : 'turn-l'); }
@@ -3220,11 +3274,20 @@ function textView(t) {
     else { showPop(anchor, [body]); widenPop(); }
   };
   V.gotoPageOf = el => { if (V.mode !== 'book') return; const i = pages.findIndex(p => p.els.includes(el)); if (i >= 0 && i !== pageNo) showPage(i, 0); };
+  V.curPids = () => {   // 지금 보고 있는 단락(들): 서책 모드는 이 쪽에 실린 단락, 두루마리는 화면 위쪽에 걸린 단락
+    if (V.mode === 'book') { const pg = pages[pageNo]; if (!pg) return []; const s = new Set(); pg.els.forEach(e => { const tp = e.closest('.tp'); const p = tp && tp.querySelector('.pid'); if (p) s.add(p.textContent); }); return [...s]; }
+    const tps = [...anno.querySelectorAll('.tp')]; let cur = tps[0]; tps.forEach(tp => { if (tp.getBoundingClientRect().top <= 160) cur = tp; }); const p = cur && cur.querySelector('.pid'); return p ? [p.textContent] : []; };
+  V.gotoPid = pid => {   // 차례 레일에서 단락으로
+    const tp = [...anno.querySelectorAll('.tp')].find(x => (x.querySelector('.pid') || {}).textContent === pid); if (!tp) return;
+    if (cover && !cover.classList.contains('compact')) openBtn.click();
+    if (V.mode === 'book') { if (!pages.length) splitPages(); const first = tp.querySelector('.tu'); const i = pages.findIndex(p => p.els.includes(first)); if (i >= 0) { if (i !== pageNo) showPage(i, i > pageNo ? 1 : -1); else railCur(V.curPids()); } }
+    else { const hdr = (document.querySelector('.top') || {}).offsetHeight || 0; window.scrollTo({ top: tp.getBoundingClientRect().top + scrollY - hdr - 12, behavior: 'smooth' }); }
+  };
   sec.addEventListener('keydown', e => {});
   document.addEventListener('keydown', e => { if (state.view !== t.id || V.mode !== 'book') return; if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || document.querySelector('dialog[open]')) return; if (e.key === 'ArrowRight') { showPage(pageNo + 1, 1); } if (e.key === 'ArrowLeft') { showPage(pageNo - 1, -1); } });
   let tx0 = null; anno.addEventListener('touchstart', e => { tx0 = e.touches[0].clientX; }, { passive: true }); anno.addEventListener('touchend', e => { if (tx0 == null || V.mode !== 'book') return; const dx = e.changedTouches[0].clientX - tx0; tx0 = null; if (Math.abs(dx) > 70) showPage(pageNo + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1); }, { passive: true });
   const txbar = h('div', { class: 'txbar' }, [modeBtn, markBtn, guessBtn, ilBtn, prBtn, hjBtn, pairBtn, lens.bar]);
-  const txbox = h('div', { class: 'txbox' }, [txbar, main, findbar]);
+  const txbox = h('div', { class: 'txbox' }, [txbar, main, pgnav, findbar]);
   const opened = !!meta0.opened;
   setTimeout(() => setMode(meta0.mode || 'book'), 0);
   const prog = progressEl(t, V);
@@ -3268,6 +3331,56 @@ add(navSel, [h('option', { value: 'overview', text: '개관' }), ...ERAS.map(era
   h('optgroup', { label: '연습 은행(차시)' }, [...D.lessons.map(L => h('option', { value: L.id, text: `${L.fill.era} ${L.fill.layer} — ${L.title}` })), h('option', { value: 'anchors', text: '다섯 번 읽기' })]),
   h('optgroup', { label: '함께 쓰는 자료' }, EXTRA.map(([v, t]) => h('option', { value: v, text: t })))]);
 add(tabs, [nav1, nav2, navSel]);
+// ── v5.1: 차례 레일(텍스트 화면, 넓은 화면) + 여백 원문(워터마크) ──────────────────────
+const RAIL = { el: null, tid: null, min: store.getTop('rail') ? store.getTop('rail') === 'min' : !matchMedia('(min-width: 1500px)').matches };
+function railBuild() {
+  const el = h('aside', { class: 'rail', id: 'rail', hidden: true, 'aria-label': '이 텍스트의 차례' });
+  el._head = h('div', { class: 'rl-head' }); el._list = h('ol', { class: 'rl-list' });
+  el._tog = h('button', { type: 'button', class: 'rl-tog', title: '차례 접기/펴기', 'aria-label': '차례 접기/펴기', onclick: () => { RAIL.min = !RAIL.min; store.setTop('rail', RAIL.min ? 'min' : 'open'); railApply(); } });
+  add(el, [h('a', { class: 'rl-mark', href: '#overview', title: '서가로', text: '\u8B8A' }), h('div', { class: 'rl-brand' }, [h('b', { text: '국어의 변화' }), h('span', { text: '서재' })]), h('hr'), el._head, el._list,
+    h('a', { class: 'rl-back', href: '#overview' }, [h('span', { class: 'ar', text: '\u2190' }), h('span', { class: 'lb', text: '서가로 돌아가기' })]), el._tog]);
+  document.body.appendChild(el); RAIL.el = el; return el;
+}
+function railApply() { const el = RAIL.el; if (!el) return; const on = !el.hidden; document.body.classList.toggle('has-rail', on); document.body.classList.toggle('rail-min', on && RAIL.min); el.classList.toggle('min', RAIL.min); el._tog.textContent = RAIL.min ? '\u00BB' : '\u00AB'; wmLayout(); }
+function railUI(view) {
+  const el = RAIL.el || railBuild(); const t = TXBY[view];
+  const show = !!t && matchMedia('(min-width: 1100px)').matches;
+  el.hidden = !show; if (!show) { railApply(); return; }
+  if (RAIL.tid !== t.id) { RAIL.tid = t.id;
+    el._head.textContent = ''; const r0 = TSRC[(flatUnits(t)[0] || {}).rid] || {};
+    add(el._head, [h('div', { class: 'rl-era', text: `${t.era} 국어` }), h('div', { class: 'rl-ttl', text: t.title }), h('div', { class: 'rl-src', text: `${r0.work || t.work || ''}${(r0.year || t.year) ? ` \u00B7 ${r0.year || t.year}` : ''}` })]);
+    el._list.textContent = '';
+    t.passages.forEach((pg, i) => el._list.appendChild(h('li', { 'data-pid': pg.pid }, [h('button', { type: 'button', title: pg.title || pg.pid, onclick: () => { const V = t._V; if (V && V.gotoPid) V.gotoPid(pg.pid); } }, [h('b', { text: String(i + 1).padStart(2, '0') }), h('span', { text: pg.title || pg.pid })])])));
+  }
+  railCur(t._V && t._V.curPids ? t._V.curPids() : []);
+  railApply();
+}
+function railCur(pids) { if (!RAIL.el || !pids) return; RAIL.el._list.querySelectorAll('li').forEach(li => li.classList.toggle('cur', pids.includes(li.dataset.pid))); }
+const WM = { el: null, tid: null };
+function wmUI(view) {   // 여백에 흐리게 깔리는 원문: 지금 보는 텍스트(차시·개관은 그 시대/중세 대표 텍스트)의 실제 본문
+  const el = WM.el || (WM.el = document.body.appendChild(h('div', { class: 'wm', id: 'wm', 'aria-hidden': 'true' })));
+  const L = D.lessons.find(x => x.id === view);
+  const t = TXBY[view] || (L && TX.find(x => x.role === '대표' && x.era === L.fill.era)) || TX.find(x => x.role === '대표' && x.era === '중세') || TX[0];
+  if (t && WM.tid !== t.id) { WM.tid = t.id; el.textContent = '';
+    const s = flatUnits(t).filter(u => u.layer !== '협주' && u.layer !== '대비').map(u => unitText(u)).join('  ') || t.title;
+    for (let k = 0; k < 6; k++) el.appendChild(h('span', { class: 'wm-c', text: s.slice((k * 37) % Math.max(1, s.length - 1)).slice(0, 150) || s.slice(0, 150) }));
+  }
+  wmLayout();
+}
+function wmLayout() {
+  const el = WM.el; if (!el) return;
+  const show = matchMedia('(min-width: 1100px)').matches && !state.printing;
+  el.hidden = !show; if (!show) return;
+  const r = document.getElementById('app').getBoundingClientRect();
+  const railW = document.body.classList.contains('has-rail') ? (document.body.classList.contains('rail-min') ? 56 : 252) : 0;
+  const cols = [...el.children]; cols.forEach(c => c.classList.remove('on'));
+  const place = (x0, x1, fromLeft, start) => { let k = start; const w = x1 - x0; if (w < 64) return k; const n = Math.min(3, Math.floor((w - 20) / 42));
+    for (let i = 0; i < n && k < cols.length; i++, k++) { cols[k].style.left = (fromLeft ? x0 + 12 + i * 42 : x1 - 48 - i * 42) + 'px'; cols[k].classList.add('on'); } return k; };
+  const k = place(railW, r.left - 6, true, 0); place(r.right + 6, innerWidth, false, k);
+}
+let railTick = false;
+addEventListener('scroll', () => { if (railTick || !RAIL.el || RAIL.el.hidden) return; railTick = true; requestAnimationFrame(() => { railTick = false; const t = TXBY[state.view]; if (t && t._V && t._V.mode !== 'book' && t._V.curPids) railCur(t._V.curPids()); }); }, { passive: true });
+addEventListener('resize', () => { if (railTick) return; railTick = true; requestAnimationFrame(() => { railTick = false; railUI(state.view); wmLayout(); }); });
 function mobTabUI(view) {
   const nav = document.getElementById('mobtab'); if (!nav) return;
   const L = D.lessons.find(x => x.id === view), T = TXBY[view];
@@ -3332,6 +3445,7 @@ function route() {
   state.view = view;
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.dataset.view === view));
   navUI(view);
+  railUI(view); wmUI(view);
   closePop();
   if (view === 'notebook') document.getElementById('v-notebook').dispatchEvent(new Event('nb-draw'));
   if (view === 'overview') { document.querySelectorAll('#v-overview .ribbons').forEach(r => r.redraw && r.redraw()); document.querySelectorAll('#v-overview .book').forEach(bk => { if (bk._t && textProgress(bk._t).all && !bk.querySelector('.nakgwan')) bk.appendChild(h('span', { class: 'nakgwan', text: '完讀' })); }); }
