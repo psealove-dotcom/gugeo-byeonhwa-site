@@ -3281,15 +3281,17 @@ function openGloss(t, g, anchor, ctx, V) {
   };
   const tagName = k => { const i = k.indexOf(':'); return i > 0 ? k.slice(i + 1) : k; };
   const tagEl = (k, cls) => { const lay = k.split(':')[0]; return h('span', { class: 'ltag ' + (cls || ''), 'data-l': lay, text: tagName(k) }); };
+  // 추측 결과 줄(10-18): 추측 없이 열람만 했거나 '모르겠어요'를 누른 기록(hit null)에는 판정을 붙이지 않고, 틀린 추측도 × 표지 없이 맞힘/놓침/해당 없음만 보인다
   const guessLine = rr => {
-    if (!rr || !rr.seen || rr.hit == null && !rr.picks && !rr.my) return null;
+    if (!rr || !rr.seen) return null;
     if (rr.my) return h('p', { class: 'gl-g ' + (rr.hit ? 'right' : 'wrong'), text: `${rr.hit ? '\u25CB' : '\u25B3'} 내 추측: ${rr.my}` });
-    if (!rr.picks) return null;
+    if (rr.hit == null || !rr.picks) return null;
     const truth = new Set(g.layers || []); const P = rr.picks || [];
     const hit = P.filter(k => truth.has(k)), extra = P.filter(k => !truth.has(k)), miss = [...truth].filter(k => !P.includes(k));
-    const mark = rr.hit ? '\u25CB 다 맞혔어요' : rr.part ? '\u25B3 일부 맞혔어요' : '\u00D7 다시 보세요';
-    return h('div', { class: 'gl-g ' + (rr.hit ? 'right' : rr.part ? 'part' : 'wrong') }, [h('b', { text: mark + ' ' }),
-      rr.same ? h('span', { class: 'gq-r' }, [truth.size ? '"거의 같다"고 보았지만 다른 점이 있어요 ' : '지금 말과 거의 같아요 ']) : null,
+    const mark = rr.hit ? '\u25CB 다 맞혔어요 ' : rr.part ? '\u25B3 일부 맞혔어요 ' : '';
+    const sameMsg = rr.same ? (truth.size ? '"거의 같다"고 보았지만 다른 점이 있어요 ' : '지금 말과 거의 같아요 ') : (!truth.size ? '이 어절은 지금 말과 거의 같아요 ' : null);
+    return h('div', { class: 'gl-g ' + (rr.hit ? 'right' : rr.part ? 'part' : 'wrong') }, [mark ? h('b', { text: mark }) : null,
+      sameMsg ? h('span', { class: 'gq-r' }, [sameMsg]) : null,
       hit.length ? h('span', { class: 'gq-r' }, ['맞힘 ', ...hit.map(k => tagEl(k, 'ok'))]) : null,
       miss.length ? h('span', { class: 'gq-r' }, ['놓침 ', ...miss.map(k => tagEl(k, 'miss'))]) : null,
       extra.length ? h('span', { class: 'gq-r' }, ['해당 없음 ', ...extra.map(k => tagEl(k, 'no'))]) : null]);
