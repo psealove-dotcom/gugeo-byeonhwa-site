@@ -763,6 +763,16 @@ dialog.big .big-meta{font-size:16px;color:var(--muted)}
 .tx.il .w,body.print-ans .tx .w{vertical-align:top;margin:2px 1px 6px}
 .tx.findmode .w:not(.w0),.tx.findmode .w.w0{cursor:crosshair}
 .tx.findmode .w.w0{pointer-events:auto}
+/* 10-22 찾기 과제 범위: 범위 밖 문장은 흐리게 하고 고를 수 없게(교사 결정) */
+.tx.findmode .tu.out{opacity:.32;filter:grayscale(.6)}
+.tx.findmode .tu.out .w{cursor:not-allowed}
+.tx.findmode .tu:not(.out){box-shadow:inset 3px 0 0 var(--accent)}
+.q-scope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 6px;font-size:12.5px}
+.sc-chip{display:inline-block;padding:2px 8px;border:1px solid var(--accent);color:var(--accent);border-radius:999px;background:var(--card)}
+.findbar .sc-chip{border-color:#fff;color:#fff;background:transparent}
+.findbar .sc-msg{color:#ffd27a;font-weight:600}
+.lens-drawer.findmode .lens-panel .q:not(.cur),.lens-drawer.findmode .lens-panel .tags-row,.lens-drawer.findmode .lens-panel .practice-link{display:none}
+.lens-drawer.findmode .lens-panel .q.cur{outline:2px solid var(--accent);outline-offset:2px}
 .w.pick{background:var(--accent2);box-shadow:inset 0 -3px 0 var(--accent)}
 .w.fright{background:var(--ok-bg);box-shadow:inset 0 -3px 0 var(--ok)}
 .w.fwrong{background:var(--no-bg);box-shadow:inset 0 -3px 0 var(--no)}
@@ -848,7 +858,7 @@ body.print-ans .tx-ans{display:block}
 .nb-tx li{margin-bottom:4px}
 @media (max-width:760px){ .eras{grid-template-columns:1fr} .tu .ul{display:none} .tu.L-언해 .ut,.tu:not([class*=" L-"]) .ut{font-size:20px} .txbar{top:96px} .lensbar{margin-left:0} .pairs-t{font-size:16px} }
 @media print{
-  .txbar,.findbar,.lens-panel .practice-link,.textv .pager,.prog .pstep{display:none!important}
+  .txbar,.findbar,.lens-panel .practice-link,.textv .pager,.prog .pstep,.q-scope .btn{display:none!important}
   .textv{break-before:page}
   .tu.core{background:none;border-left-color:#999}
   .w .g{border-bottom:0!important}
@@ -3445,11 +3455,41 @@ function taskEl(t, task, i, lay, ctx, V) {
   if (task.graded === false) { el.classList.add('ng'); const qt = el.querySelector('.q-t'); if (qt) qt.textContent += ' · 채점 없음'; el.querySelector('.q-h').appendChild(h('span', { class: 'ng-badge', title: '학설이 갈리거나 자료만으로 확정할 수 없는 물음 — 답을 견주어 보기만 합니다', text: '견주어 보기' })); }
   return el;
 }
+// 10-22 찾기 과제의 범위(교사 결정: 자동 산출, 범위 밖은 클릭 금지). 핵심 구간 안에 정답이 다 들면 핵심 구간, 아니면 정답이 든 단락 전체, 그것이 글 전체면 '글 전체'.
+// 데이터로 덮어쓰기: task.scope = 'all' | 'core' | [첫 문장 번호, 끝 문장 번호](단위의 s 기준)
+function findScope(t, task) {
+  const us = flatUnits(t), core = coreKeys(t);
+  const hit = (u, x) => { if (u.rid !== x.rid) return false; if ('syl' in x) return !u.syl || !(x.syl[1] < u.syl[0] || x.syl[0] > u.syl[1]); if ('tok' in x) return !u.tok || (x.tok >= u.tok[0] && x.tok <= u.tok[1]); return false; };
+  const tu = us.filter(u => (task.targets || []).some(x => hit(u, x)));
+  const sc = task.scope; let sel, kind;
+  if (sc === 'all') { sel = us; kind = 'all'; }
+  else if (sc === 'core' && core.size) { sel = us.filter(u => core.has(unitKey(u))); kind = 'core'; }
+  else if (Array.isArray(sc)) { sel = us.filter(u => u.s != null && u.s >= sc[0] && u.s <= sc[1]); kind = 'given'; }
+  else if (core.size && tu.length && tu.every(u => core.has(unitKey(u)))) { sel = us.filter(u => core.has(unitKey(u))); kind = 'core'; }
+  else { const pids = new Set(tu.map(u => u.pid)); sel = us.filter(u => pids.has(u.pid)); kind = sel.length === us.length ? 'all' : 'passage'; }
+  if (!sel.length || sel.length === us.length) { sel = us; kind = 'all'; }
+  const keys = new Set(sel.map(unitKey)), sn = sel.filter(u => !u.layer || u.layer === '언해'), nums = sn.map(u => u.s).filter(x => x != null);   // 문장 수: 원문(한문)·협주·대비 줄은 빼고 셈
+  const pids = [...new Set(sel.map(u => u.pid))], uniq = nums.length && nums.length === sn.length && new Set(nums).size === nums.length;   // 단락마다 번호가 1부터 다시 시작하면 문장 번호로 부르지 않음
+  let label;
+  if (kind === 'all') label = '글 전체';
+  else if (uniq) { const a = Math.min(...nums), b = Math.max(...nums); label = (kind === 'passage' ? `${pids.join('·')} 단락 ` : '') + (a === b ? `${a}번 문장` : `${a}~${b}번 문장`); }
+  else label = pids.length === 1 ? `${pids[0]} 단락` : `${pids[0]}~${pids[pids.length - 1]} 단락`;
+  if (kind === 'core') label = '핵심 구간 ' + label;
+  return { keys, label, n: sn.length, first: unitKey(sel[0]), all: kind === 'all' };
+}
+function scopeChip(V, sc, inBar) {
+  const kids = [h('span', { class: 'sc-chip', text: `범위 ${sc.label} · ${sc.n}문장` })];
+  if (inBar && V.scopePages) { const sp = V.scopePages(sc.keys); if (sp && sp.pages.length) { const here = sp.pages.includes(sp.cur); kids.push(h('span', { class: 'sc-pg', text: `쪽 ${sp.pages.map(i => HANNUM(i + 1)).join('·')}${here ? '' : ' (이 쪽에는 범위가 없음)'}` })); } }
+  kids.push(h('button', { type: 'button', class: 'btn ghost sm', text: '범위로 가기', title: '범위의 첫 문장으로 이동', onclick: () => V.gotoUnit && V.gotoUnit(sc.first) }));
+  if (inBar && V.scopeMsg) kids.push(h('span', { class: 'sc-msg', text: V.scopeMsg }));
+  return h(inBar ? 'span' : 'div', { class: inBar ? 'q-scope bar' : 'q-scope' }, kids);
+}
 function findEl(t, task, no, key, ctx, V) {
   const saved = store.get('text', key) || { picked: [], done: false };
+  const scope = findScope(t, task);
   const targets = task.targets.map(x => ({ ...x, key: posKey(x) }));
   const status = h('span', { class: 'answered-note', text: '' }), fb = h('div', { class: 'fb', hidden: true });
-  const start = h('button', { type: 'button', class: 'btn', text: '본문에서 고르기', onclick: () => { if (V.find && V.find.key === key) { saved.picked = [...V.picked]; store.set('text', key, saved); V.endFind(); } else V.beginFind(task, key, saved, grade); sync(); } });
+  const start = h('button', { type: 'button', class: 'btn', text: '본문에서 고르기', onclick: () => { if (V.find && V.find.key === key) { saved.picked = [...V.picked]; store.set('text', key, saved); V.endFind(); } else V.beginFind(task, key, saved, grade, el); sync(); } });
   const chk = h('button', { type: 'button', class: 'btn', text: '확인', disabled: true, onclick: () => grade() });
   const sync = () => { const active = V.find && V.find.key === key; const n = active ? V.picked.size : saved.picked.length; status.textContent = active ? `고르는 중 \u2014 ${n}개 선택(\u2461 본문의 어절을 누르세요)` : saved.done ? '' : n ? `${n}개 골라 둠` : ''; chk.disabled = saved.done || n === 0; start.disabled = saved.done; start.textContent = active ? '고르기 멈춤' : '본문에서 고르기'; };
   function grade() { const picked = V.find && V.find.key === key ? [...V.picked] : saved.picked; if (V.find && V.find.key === key) V.endFind();
@@ -3461,7 +3501,7 @@ function findEl(t, task, no, key, ctx, V) {
       h('span', { class: 'ow', style: 'color:inherit' }, ['정답 어절: ', ...targets.flatMap((x, k) => [k ? ', ' : '', txt(evText(x), ctx, 'oh')])])]);
     sync(); V.progress(); }
   V.onFindChange.push(sync);
-  const el = h('div', { class: 'q find', 'data-type': 'find' }, [h('div', { class: 'q-h' }, [h('span', { class: 'q-n', text: no }), h('div', { class: 'q-s' }, txt(task.q, ctx)), h('span', { class: 'q-t', text: '본문에서 찾기' })]), h('div', { class: 'q-a' }, [start, chk, status]), fb]);
+  const el = h('div', { class: 'q find', 'data-type': 'find' }, [h('div', { class: 'q-h' }, [h('span', { class: 'q-n', text: no }), h('div', { class: 'q-s' }, txt(task.q, ctx)), h('span', { class: 'q-t', text: '본문에서 찾기' })]), scopeChip(V, scope, false), h('div', { class: 'q-a' }, [start, chk, status]), fb]);
   if (saved.done) setTimeout(grade, 0); else sync();
   return el;
 }
@@ -3639,10 +3679,18 @@ function textView(t) {
   const anno = annoBlock(t, ctx, V); V.root = anno;
   const mark0 = meta0.mark != null ? !!meta0.mark : true; anno.classList.toggle('mark', mark0);
   const findbar = h('div', { class: 'findbar', hidden: true });
-  V.beginFind = (task, key, saved, grade) => { if (task.needs === '협주' && V.openHyeopju) V.openHyeopju(); V.find = { task, key, grade }; V.picked = new Set(saved.picked || []); anno.classList.add('findmode'); V.words.forEach(sp => { sp.classList.remove('fright', 'fwrong', 'fmiss'); sp.classList.toggle('pick', V.picked.has(sp.dataset.key)); }); V.onFindChange.forEach(f => f()); };
-  V.endFind = () => { V.find = null; anno.classList.remove('findmode'); V.words.forEach(sp => sp.classList.remove('pick')); V.onFindChange.forEach(f => f()); };
-  V.togglePick = sp => { const k = sp.dataset.key; if (!k) return; if (V.picked.has(k)) V.picked.delete(k); else V.picked.add(k); sp.classList.toggle('pick', V.picked.has(k)); V.onFindChange.forEach(f => f()); };
-  V.onFindChange.push(() => { findbar.hidden = !V.find; findbar.textContent = ''; if (!V.find) return; add(findbar, [h('span', null, [h('b', { text: '본문에서 찾기 ' }), `${V.find.task.q} \u2014 ${V.picked.size}개 선택`]), h('button', { type: 'button', class: 'btn pri', text: '확인', disabled: !V.picked.size, onclick: () => V.find.grade() }), h('button', { type: 'button', class: 'btn ghost', text: '멈춤', onclick: () => { store.set('text', V.find.key, { ...(store.get('text', V.find.key) || {}), picked: [...V.picked], done: false }); V.endFind(); } })]); });
+  // 10-22 범위: 범위 밖 문장(.tu.out)은 흐리게·클릭 금지, 패널은 진행 중 과제만, 범위가 화면에 없으면 첫 문장으로 이동
+  const inView = el => { if (!el || el.classList.contains('pg-hide')) return false; const r = el.getBoundingClientRect(); return r.bottom > 110 && r.top < innerHeight - 70; };
+  V.beginFind = (task, key, saved, grade, el) => { if (task.needs === '협주' && V.openHyeopju) V.openHyeopju(); const scope = findScope(t, task); V.find = { task, key, grade, scope, el }; V.picked = new Set(saved.picked || []); anno.classList.add('findmode');
+    anno.querySelectorAll('.tu').forEach(l => l.classList.toggle('out', !scope.keys.has(l.dataset.u))); if (V.drawer) V.drawer.classList.add('findmode'); if (el) el.classList.add('cur');
+    V.words.forEach(sp => { sp.classList.remove('fright', 'fwrong', 'fmiss'); sp.classList.toggle('pick', V.picked.has(sp.dataset.key)); }); V.onFindChange.forEach(f => f());
+    if (![...anno.querySelectorAll('.tu:not(.out)')].some(inView)) V.gotoUnit(scope.first); };
+  V.endFind = () => { const el = V.find && V.find.el; V.find = null; V.scopeMsg = null; anno.classList.remove('findmode'); anno.querySelectorAll('.tu.out').forEach(l => l.classList.remove('out')); if (V.drawer) V.drawer.classList.remove('findmode'); if (el) el.classList.remove('cur'); V.words.forEach(sp => sp.classList.remove('pick')); V.onFindChange.forEach(f => f()); };
+  let msgTimer = null;
+  V.togglePick = sp => { const k = sp.dataset.key; if (!k) return;
+    const line = sp.closest('.tu'); if (V.find && V.find.scope && (!line || !V.find.scope.keys.has(line.dataset.u))) { V.scopeMsg = '범위 밖 어절은 고를 수 없어요'; V.onFindChange.forEach(f => f()); clearTimeout(msgTimer); msgTimer = setTimeout(() => { V.scopeMsg = null; V.onFindChange.forEach(f => f()); }, 1600); return; }
+    if (V.picked.has(k)) V.picked.delete(k); else V.picked.add(k); sp.classList.toggle('pick', V.picked.has(k)); V.onFindChange.forEach(f => f()); };
+  V.onFindChange.push(() => { findbar.hidden = !V.find; findbar.textContent = ''; if (!V.find) return; add(findbar, [h('span', null, [h('b', { text: '본문에서 찾기 ' }), `${V.find.task.q} \u2014 ${V.picked.size}개 선택`]), scopeChip(V, V.find.scope, true), h('button', { type: 'button', class: 'btn pri', text: '확인', disabled: !V.picked.size, onclick: () => V.find.grade() }), h('button', { type: 'button', class: 'btn ghost', text: '멈춤', onclick: () => { store.set('text', V.find.key, { ...(store.get('text', V.find.key) || {}), picked: [...V.picked], done: false }); V.endFind(); } })]); });
   const lens = lensBlock(t, ctx, V);
   const bangju = h('div', { class: 'bangju-slot' }, [h('p', { class: 'muted bj-hint', text: '왼쪽 쪽의 어절을 누르면 여기에 풀이(방주)가 나옵니다. 한자는 훈·음.' })]);
   const haeBox = h('details', { class: 'hae' }, [h('summary', { text: '이 쪽의 현대어 해설' }), h('div', { class: 'hae-list' })]);
@@ -3696,6 +3744,7 @@ function textView(t) {
     anno.querySelectorAll('.tu, .upr').forEach(e => e.classList.add('pg-hide'));
     pages[pageNo].els.forEach(e => e.classList.remove('pg-hide'));
     const pg = pages[pageNo];
+    if (V.find) V.onFindChange.forEach(f => f());   // 10-22: 쪽이 바뀌면 찾기 막대의 '범위 쪽' 표시 갱신
     pghead.textContent = ''; add(pghead, [h('span', { class: 'pid', text: pg.pid }), h('b', { text: pg.title }), pages.length > 1 ? h('span', { class: 'pgn', text: `${HANNUM(pageNo + 1)} / ${HANNUM(pages.length)}` }) : null]);
     pgnav.textContent = ''; pgnav.classList.toggle('one', pages.length < 2);
     const PN = n => String(n).padStart(2, '0');
@@ -3715,6 +3764,7 @@ function textView(t) {
     if (mode === 'book') { splitPages(); drawer.hidden = false; showPage(keepPage ? pageNo : (meta0.page || 0)); }
     else { anno.querySelectorAll('.pg-hide').forEach(e => e.classList.remove('pg-hide')); pgnav.textContent = ''; drawer.hidden = !V.lens; bangju.classList.remove('on'); }
     tset(t.id, 'meta', 'mode', mode);
+    if (V.find && V.find.scope) setTimeout(() => V.gotoUnit(V.find.scope.first), 0);   // 10-22: 고르는 중에 모드를 바꾸면 범위의 첫 문장(쪽)으로 따라간다
   }
   const modeBtn = h('button', { type: 'button', class: 'tbtn', 'aria-checked': 'true', text: '펼침면', title: '펼침면(책처럼 쪽을 넘기며 읽기) / 두루마리(한 번에 내려 읽기)', onclick: () => setMode(V.mode === 'book' ? 'scroll' : 'book', true) });
   V.present = (body, anchor) => {
@@ -3722,6 +3772,9 @@ function textView(t) {
     else { showPop(anchor, [body]); widenPop(); }
   };
   V.gotoPageOf = el => { if (V.mode !== 'book') return; const i = pages.findIndex(p => p.els.includes(el)); if (i >= 0 && i !== pageNo) showPage(i, 0); };
+  // 10-22 찾기 범위: 단위(문장)로 이동 · 범위가 실린 쪽 목록(서책 모드)
+  V.gotoUnit = key => { const el = anno.querySelector(`.tu[data-u="${CSS.escape(key)}"]`); if (!el) return; if (cover && !cover.classList.contains('compact')) openBtn.click(); if (V.mode === 'book') V.gotoPageOf(el); const hdr = (document.querySelector('.top') || {}).offsetHeight || 0; window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - hdr - 72, behavior: 'smooth' }); };
+  V.scopePages = keys => { if (V.mode !== 'book') return null; if (!pages.length) splitPages(); const s = new Set(); pages.forEach((p, i) => { if (p.els.some(e => e.classList && e.classList.contains('tu') && keys.has(e.dataset.u))) s.add(i); }); return { pages: [...s].sort((a, b) => a - b), cur: pageNo }; };
   V.curPids = () => {   // 지금 보고 있는 단락(들): 서책 모드는 이 쪽에 실린 단락, 두루마리는 화면 위쪽에 걸린 단락
     if (V.mode === 'book') { const pg = pages[pageNo]; if (!pg) return []; const s = new Set(); pg.els.forEach(e => { const tp = e.closest('.tp'); const p = tp && tp.querySelector('.pid'); if (p) s.add(p.textContent); }); return [...s]; }
     const tps = [...anno.querySelectorAll('.tp')]; let cur = tps[0]; tps.forEach(tp => { if (tp.getBoundingClientRect().top <= 160) cur = tp; }); const p = cur && cur.querySelector('.pid'); return p ? [p.textContent] : []; };
