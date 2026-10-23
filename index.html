@@ -3299,7 +3299,7 @@ function morphEl(g, ctx) {
     g.mnote ? h('p', { class: 'gl-mn' }, [h('b', { text: '표기 ' }), txt(g.mnote, ctx)]) : null]);
 }
 function widenPop() { const pp = document.querySelector('.pop'); if (!pp) return; const pw = Math.min(500, innerWidth - 24); pp.style.width = pw + 'px'; const left = parseFloat(pp.style.left) || 0; if (left + pw > scrollX + innerWidth - 12) pp.style.left = Math.max(12, scrollX + innerWidth - pw - 12) + 'px'; }
-const GL_ORDER_NEW = new Set(['T-JS-HUNMIN']);   // 10-22 주석 팝업 새 순서를 적용하는 텍스트(교사 확인 뒤 전체로 확대)
+const GL_ORDER_NEW = null;   // 10-22 주석 팝업 새 순서(형태소 분석 → 음운 → 뜻·풀이 → 문법·표기) 적용 텍스트 — null이면 전체(10-23 교사 결정으로 전체 확대; 일부만 쓰려면 new Set([...]))
 function openGloss(t, g, anchor, ctx, V) {
   const r = (V.rec().guess || {})[g.gid] || {};
   const needGuess = V.guessMode && g.guess && !r.seen;
@@ -3335,7 +3335,7 @@ function openGloss(t, g, anchor, ctx, V) {
     (lk.term || []).forEach(term => { const gg = GLOSS_BY[term]; lks.push(gg ? h('span', { class: 'term gl-link', role: 'button', tabindex: '0', text: term, onclick: e => { e.stopPropagation(); termPop(e.currentTarget, gg); } }) : h('span', { class: 'gl-link', text: term })); });
     if (lks.length) tail.push(h('div', { class: 'gl-k' }, lks));
     const ftP = ft.filter(f => f.layer === '음운'), ftG = ft.filter(f => f.layer !== '음운');
-    if (GL_ORDER_NEW.has(t.id)) return [...top, ...morph, ftP.length ? ftEl(ftP, '음운') : null, (meanA.length || meanB.length) ? h('b', { class: 'gl-sh', text: '뜻·풀이' }) : null, ...meanA, ...meanB, ftG.length ? ftEl(ftG, '문법·표기') : null, ...tail];
+    if (!GL_ORDER_NEW || GL_ORDER_NEW.has(t.id)) return [...top, ...morph, ftP.length ? ftEl(ftP, '음운') : null, (meanA.length || meanB.length) ? h('b', { class: 'gl-sh', text: '뜻·풀이' }) : null, ...meanA, ...meanB, ftG.length ? ftEl(ftG, '문법·표기') : null, ...tail];
     return [...top, ...meanA, ...morph, ...meanB, ft.length ? ftEl(ft, '이 어절에서 볼 것') : null, ...tail];
   };
   const tagName = k => { const i = k.indexOf(':'); return i > 0 ? k.slice(i + 1) : k; };
